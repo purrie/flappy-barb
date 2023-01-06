@@ -2,7 +2,12 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::{cleanup::Dead, physics::CollisionEvent, player::AttackState};
+use crate::{
+    cleanup::Dead,
+    gravity::VerticalMove,
+    physics::{Collider, CollisionEvent},
+    player::AttackState,
+};
 
 pub struct ObstaclesPlugin;
 
@@ -19,7 +24,7 @@ impl Plugin for ObstaclesPlugin {
             .add_system(move_obstacles)
             .add_system(bird_animation)
             .add_system(remove_obstacle.before("cleanup"))
-            .add_system(kill_obstacles.before("cleanup"));
+            .add_system(kill_obstacles.before("cleanup").after("physics"));
     }
 }
 
@@ -43,11 +48,18 @@ struct BirdSpawnTimer {
 struct BirdSprites {
     first: Handle<Image>,
     second: Handle<Image>,
+    dead: Handle<Image>,
+}
+
+impl BirdSprites {
+    pub const SPRITE_SIZE_X: f32 = 128.;
+    pub const SPRITE_SIZE_Y: f32 = 128.;
 }
 
 fn load_birds(mut bs: ResMut<BirdSprites>, asset_server: Res<AssetServer>) {
     bs.first = asset_server.load("sprites/bird-fly-1.png");
     bs.second = asset_server.load("sprites/bird-fly-2.png");
+    bs.dead = asset_server.load("sprites/bird-dead.png");
 }
 
 fn spawn_birds(
@@ -67,7 +79,10 @@ fn spawn_birds(
             SpriteBundle {
                 texture: img,
                 sprite: Sprite {
-                    custom_size: Some(Vec2 { x: 128., y: 128. }),
+                    custom_size: Some(Vec2 {
+                        x: BirdSprites::SPRITE_SIZE_X,
+                        y: BirdSprites::SPRITE_SIZE_Y,
+                    }),
                     ..Default::default()
                 },
                 transform: Transform {
@@ -82,6 +97,7 @@ fn spawn_birds(
             },
             Obstacle,
             Bird,
+            Collider,
             HorizontalMove { speed: 500. },
         );
         cmd.spawn(sprite);
@@ -125,16 +141,41 @@ fn remove_obstacle(
     let op = camera_view.get_single().unwrap();
     obstacles
         .iter()
-        .filter(|x| x.1.translation.x < (op.left - 64.))
+        .filter(|x| x.1.translation.x < (op.left - 64.) || x.1.translation.y < (op.bottom - 64.))
         .for_each(|x| {
             cmd.entity(x.0).remove::<Obstacle>().insert(Dead);
         });
 }
 
-fn kill_obstacles(mut cmd: Commands, mut ev: EventReader<CollisionEvent>) {
+fn kill_obstacles(
+    mut cmd: Commands,
+    mut ev: EventReader<CollisionEvent>,
+    sprites: Res<BirdSprites>,
+) {
     ev.iter()
         .filter(|x| x.player_state != AttackState::NotAttacking)
         .for_each(|x| {
             cmd.entity(x.obstacle).remove::<Obstacle>().insert(Dead);
+            cmd.spawn((
+                SpriteBundle {
+                    texture: sprites.dead.clone(),
+                    sprite: Sprite {
+                        custom_size: Some(Vec2 {
+                            x: BirdSprites::SPRITE_SIZE_X,
+                            y: BirdSprites::SPRITE_SIZE_Y,
+                        }),
+                        ..Default::default()
+                    },
+                    transform: Transform {
+                        translation: x.obstacle_pos,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                VerticalMove {
+                    speed: VerticalMove::JUMP_STRENGTH,
+                },
+                Obstacle,
+            ));
         });
 }

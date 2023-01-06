@@ -2,6 +2,8 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
+use crate::{cleanup::Dead, physics::CollisionEvent, player::AttackState};
+
 pub struct ObstaclesPlugin;
 
 impl Plugin for ObstaclesPlugin {
@@ -9,32 +11,20 @@ impl Plugin for ObstaclesPlugin {
         let birb_time = BirdSpawnTimer {
             timer: Timer::new(Duration::new(2, 0), TimerMode::Repeating),
         };
-        let sys = SystemSet::new()
-            .before(Cleanup)
-            .with_system(spawn_birds)
-            .with_system(move_obstacles)
-            .with_system(bird_animation);
-
-        let cleanup = SystemSet::new()
-            .label(Cleanup)
-            .with_system(remove_obstacle);
 
         app.insert_resource(birb_time)
             .insert_resource(BirdSprites::default())
             .add_startup_system(load_birds)
-            .add_system_set(sys)
-            .add_system_set(cleanup);
+            .add_system(spawn_birds)
+            .add_system(move_obstacles)
+            .add_system(bird_animation)
+            .add_system(remove_obstacle.before("cleanup"))
+            .add_system(kill_obstacles.before("cleanup"));
     }
 }
 
-/// Label to sort order of system execution
-///
-/// Ensures the other systems don't work on deleted entities
-#[derive(SystemLabel)]
-struct Cleanup;
-
 #[derive(Component)]
-struct Obstacle;
+pub struct Obstacle;
 
 #[derive(Component)]
 struct Bird;
@@ -106,22 +96,10 @@ fn move_obstacles(
         .for_each(|mut x| x.1.translation.x -= x.0.speed * time.delta_seconds());
 }
 
-fn remove_obstacle(
-    mut cmd: Commands,
-    camera_view: Query<&OrthographicProjection>,
-    obstacles: Query<(Entity, &Transform), With<Obstacle>>,
-) {
-    let op = camera_view.get_single().unwrap();
-    obstacles
-        .iter()
-        .filter(|x| x.1.translation.x < (op.left - 64.))
-        .for_each(|x| cmd.entity(x.0).despawn());
-}
-
 fn bird_animation(
     mut cmd: Commands,
     sprites: Res<BirdSprites>,
-    birds: Query<(Entity, &Transform), With<Bird>>,
+    birds: Query<(Entity, &Transform), (With<Bird>, With<Obstacle>)>,
 ) {
     birds.for_each(|x| {
         let Some(mut cmd) = cmd.get_entity(x.0) else {
@@ -137,4 +115,26 @@ fn bird_animation(
             }
         }
     })
+}
+
+fn remove_obstacle(
+    mut cmd: Commands,
+    camera_view: Query<&OrthographicProjection>,
+    obstacles: Query<(Entity, &Transform), With<Obstacle>>,
+) {
+    let op = camera_view.get_single().unwrap();
+    obstacles
+        .iter()
+        .filter(|x| x.1.translation.x < (op.left - 64.))
+        .for_each(|x| {
+            cmd.entity(x.0).remove::<Obstacle>().insert(Dead);
+        });
+}
+
+fn kill_obstacles(mut cmd: Commands, mut ev: EventReader<CollisionEvent>) {
+    ev.iter()
+        .filter(|x| x.player_state != AttackState::NotAttacking)
+        .for_each(|x| {
+            cmd.entity(x.obstacle).remove::<Obstacle>().insert(Dead);
+        });
 }

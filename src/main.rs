@@ -2,6 +2,7 @@ mod cleanup;
 mod obstacles;
 mod physics;
 mod player;
+mod ui;
 
 use bevy::{
     audio::AudioPlugin, core_pipeline::CorePipelinePlugin, input::InputPlugin, prelude::*,
@@ -12,6 +13,7 @@ use cleanup::CleanerPlugin;
 use obstacles::ObstaclesPlugin;
 use physics::PhysicsPlugin;
 use player::PlayerPlugin;
+use ui::GameUiPlugin;
 
 fn main() {
     App::new()
@@ -37,6 +39,7 @@ fn main() {
         .add_startup_system(make_camera)
         .add_plugin(PlayerPlugin)
         .add_plugin(ObstaclesPlugin)
+        .add_plugin(GameUiPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(CleanerPlugin)
         .run();

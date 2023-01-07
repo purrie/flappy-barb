@@ -4,8 +4,9 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
-    physics::{Collider, CollisionEvent, Gravity, Movement, FaceMovementDirection},
+    physics::{Collider, CollisionEvent, FaceMovementDirection, Gravity, Movement},
     player::AttackState,
+    ui::ScoreEvent,
 };
 
 pub struct ObstaclesPlugin;
@@ -26,8 +27,10 @@ impl Plugin for ObstaclesPlugin {
     }
 }
 
-#[derive(Component)]
-pub struct Obstacle;
+#[derive(Component, Default)]
+pub struct Obstacle {
+    pub defeated: bool,
+}
 
 #[derive(Component)]
 struct Bird;
@@ -88,7 +91,7 @@ fn spawn_birds(
                 },
                 ..Default::default()
             },
-            Obstacle,
+            Obstacle::default(),
             Bird,
             Collider,
             Movement { x: -500., y: 0. },
@@ -121,7 +124,8 @@ fn bird_animation(
 fn remove_obstacle(
     mut cmd: Commands,
     camera_view: Query<&OrthographicProjection>,
-    obstacles: Query<(Entity, &Transform), With<Obstacle>>,
+    obstacles: Query<(Entity, &Transform, &Obstacle)>,
+    mut ev: EventWriter<ScoreEvent>,
 ) {
     let op = camera_view.get_single().unwrap();
     obstacles
@@ -129,6 +133,9 @@ fn remove_obstacle(
         .filter(|x| x.1.translation.x < (op.left - 64.) || x.1.translation.y < (op.bottom - 64.))
         .for_each(|x| {
             cmd.entity(x.0).remove::<Obstacle>().insert(Dead);
+            if x.2.defeated == false {
+                ev.send(ScoreEvent::ResetCombo)
+            }
         });
 }
 
@@ -136,6 +143,7 @@ fn kill_obstacles(
     mut cmd: Commands,
     mut ev: EventReader<CollisionEvent>,
     sprites: Res<BirdSprites>,
+    mut score: EventWriter<ScoreEvent>,
 ) {
     ev.iter()
         .filter(|x| x.player_state != AttackState::NotAttacking)
@@ -165,8 +173,11 @@ fn kill_obstacles(
                     y: force.y,
                 },
                 Gravity::default(),
-                FaceMovementDirection { neutral: Vec2 { x: 0., y: -1. } },
-                Obstacle,
+                FaceMovementDirection {
+                    neutral: Vec2 { x: 0., y: -1. },
+                },
+                Obstacle { defeated: true },
             ));
+            score.send(ScoreEvent::Add);
         });
 }

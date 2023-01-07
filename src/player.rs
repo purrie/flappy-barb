@@ -1,16 +1,25 @@
 use bevy::prelude::*;
 
-use crate::physics::{Gravity, Movement};
+use crate::{
+    game::GameState,
+    physics::{Gravity, Movement},
+};
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(make_player_sprite)
-            .add_system(player_on_side)
-            .add_system(jump_system.after("gravity").before("movement"))
-            .add_system(attack_state.before("collision"))
-            .add_system(animate_player);
+        let start = SystemSet::on_enter(GameState::Playing).with_system(make_player_sprite);
+        let update = SystemSet::on_update(GameState::Playing)
+            .with_system(player_on_side)
+            .with_system(jump_system.after("gravity").before("movement"))
+            .with_system(attack_state.before("collision"))
+            .with_system(animate_player);
+        let end = SystemSet::on_exit(GameState::Playing).with_system(player_dead);
+
+        app.add_system_set(start)
+            .add_system_set(update)
+            .add_system_set(end);
     }
 }
 
@@ -98,4 +107,10 @@ fn player_on_side(
     let mut player = player.get_single_mut().unwrap();
     let cam = camera_view.get_single().unwrap();
     player.translation.x = cam.left + 256.;
+}
+
+fn player_dead(mut player: Query<(&mut Sprite, &mut Movement), With<Player>>) {
+    let mut player = player.get_single_mut().unwrap();
+    player.0.color = Color::GREEN;
+    player.1.y = PLAYER_JUMP_STRENGTH;
 }

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
+    game::GameState,
     physics::{Collider, CollisionEvent, FaceMovementDirection, Gravity, Movement},
     player::AttackState,
     ui::ScoreEvent,
@@ -13,17 +14,16 @@ pub struct ObstaclesPlugin;
 
 impl Plugin for ObstaclesPlugin {
     fn build(&self, app: &mut App) {
-        let birb_time = BirdSpawnTimer {
-            timer: Timer::new(Duration::new(2, 0), TimerMode::Repeating),
-        };
+        let start = SystemSet::on_enter(GameState::Playing).with_system(setup_bird_spawn_timer);
+        let update = SystemSet::on_update(GameState::Playing)
+            .with_system(spawn_birds)
+            .with_system(bird_animation)
+            .with_system(remove_obstacle.before("cleanup"))
+            .with_system(kill_obstacles.before("cleanup").after("collision"));
 
-        app.insert_resource(birb_time)
-            .insert_resource(BirdSprites::default())
-            .add_startup_system(load_birds)
-            .add_system(spawn_birds)
-            .add_system(bird_animation)
-            .add_system(remove_obstacle.before("cleanup"))
-            .add_system(kill_obstacles.before("cleanup").after("collision"));
+        app.add_startup_system(load_birds)
+            .add_system_set(start)
+            .add_system_set(update);
     }
 }
 
@@ -52,10 +52,20 @@ impl BirdSprites {
     pub const SPRITE_SIZE_Y: f32 = 128.;
 }
 
-fn load_birds(mut bs: ResMut<BirdSprites>, asset_server: Res<AssetServer>) {
-    bs.first = asset_server.load("sprites/bird-fly-1.png");
-    bs.second = asset_server.load("sprites/bird-fly-2.png");
-    bs.dead = asset_server.load("sprites/bird-dead.png");
+fn load_birds(mut cmd: Commands, asset_server: Res<AssetServer>) {
+    let bs = BirdSprites {
+        first: asset_server.load("sprites/bird-fly-1.png"),
+        second: asset_server.load("sprites/bird-fly-2.png"),
+        dead: asset_server.load("sprites/bird-dead.png"),
+    };
+    cmd.insert_resource(bs);
+}
+
+fn setup_bird_spawn_timer(mut cmd: Commands) {
+    let birb_time = BirdSpawnTimer {
+        timer: Timer::new(Duration::new(2, 0), TimerMode::Repeating),
+    };
+    cmd.insert_resource(birb_time);
 }
 
 fn spawn_birds(

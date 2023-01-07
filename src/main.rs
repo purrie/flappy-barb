@@ -1,4 +1,5 @@
 mod cleanup;
+mod game;
 mod obstacles;
 mod physics;
 mod player;
@@ -10,6 +11,7 @@ use bevy::{
     winit::WinitPlugin,
 };
 use cleanup::CleanerPlugin;
+use game::GamePlugin;
 use obstacles::ObstaclesPlugin;
 use physics::PhysicsPlugin;
 use player::PlayerPlugin;
@@ -36,15 +38,11 @@ fn main() {
         .add_plugin(UiPlugin::default())
         .add_plugin(AudioPlugin::default())
         // Game Plugins
-        .add_startup_system(make_camera)
+        .add_plugin(GamePlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(ObstaclesPlugin)
         .add_plugin(GameUiPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(CleanerPlugin)
         .run();
-}
-
-fn make_camera(mut cmd: Commands) {
-    cmd.spawn(Camera2dBundle::default());
 }

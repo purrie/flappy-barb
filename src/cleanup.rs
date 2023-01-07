@@ -12,5 +12,5 @@ impl Plugin for CleanerPlugin {
 pub struct Dead;
 
 fn clean_dead(mut cmd: Commands, ded: Query<Entity, With<Dead>>) {
-    ded.for_each(|x| cmd.entity(x).despawn());
+    ded.for_each(|x| cmd.entity(x).despawn_recursive());
 }

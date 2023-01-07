@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::gravity::VerticalMove;
+use crate::physics::{Gravity, Movement};
 
 pub struct PlayerPlugin;
 
@@ -8,11 +8,13 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(make_player_sprite)
             .add_system(player_on_side)
-            .add_system(jump_system)
-            .add_system(attack_state)
+            .add_system(jump_system.after("gravity").before("movement"))
+            .add_system(attack_state.before("collision"))
             .add_system(animate_player);
     }
 }
+
+pub const PLAYER_JUMP_STRENGTH: f32 = 500.;
 
 #[derive(Default, Clone, PartialEq)]
 pub enum AttackState {
@@ -27,18 +29,18 @@ pub struct Player {
     pub attack_state: AttackState,
 }
 
-fn jump_system(input: Res<Input<KeyCode>>, mut player: Query<&mut VerticalMove, With<Player>>) {
+fn jump_system(input: Res<Input<KeyCode>>, mut player: Query<&mut Movement, With<Player>>) {
     if input.just_pressed(KeyCode::Space) {
         for mut mov in player.iter_mut() {
-            mov.speed = VerticalMove::JUMP_STRENGTH;
+            mov.y = PLAYER_JUMP_STRENGTH;
         }
     }
 }
 
-fn attack_state(mut player: Query<(&mut Player, &VerticalMove)>) {
+fn attack_state(mut player: Query<(&mut Player, &Movement)>) {
     let mut pl = player.get_single_mut().unwrap();
-    let threshhold = VerticalMove::JUMP_STRENGTH / 2.;
-    pl.0.attack_state = match pl.1.speed {
+    let threshhold = PLAYER_JUMP_STRENGTH / 2.;
+    pl.0.attack_state = match pl.1.y {
         x if x > threshhold => AttackState::Swinging,
         x if x > 0. => AttackState::SwingEnd,
         _ => AttackState::NotAttacking,
@@ -80,7 +82,11 @@ fn make_player_sprite(mut commands: Commands, _asset_server: Res<AssetServer>) {
             },
             ..default()
         },
-        VerticalMove { speed: 1. },
+        Movement {
+            y: PLAYER_JUMP_STRENGTH,
+            ..Default::default()
+        },
+        Gravity::default(),
         Player::default(),
     ));
 }

@@ -4,8 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
-    gravity::VerticalMove,
-    physics::{Collider, CollisionEvent},
+    physics::{Collider, CollisionEvent, Gravity, Movement},
     player::AttackState,
 };
 
@@ -21,10 +20,9 @@ impl Plugin for ObstaclesPlugin {
             .insert_resource(BirdSprites::default())
             .add_startup_system(load_birds)
             .add_system(spawn_birds)
-            .add_system(move_obstacles)
             .add_system(bird_animation)
             .add_system(remove_obstacle.before("cleanup"))
-            .add_system(kill_obstacles.before("cleanup").after("physics"));
+            .add_system(kill_obstacles.before("cleanup").after("collision"));
     }
 }
 
@@ -33,11 +31,6 @@ pub struct Obstacle;
 
 #[derive(Component)]
 struct Bird;
-
-#[derive(Component)]
-struct HorizontalMove {
-    speed: f32,
-}
 
 #[derive(Resource, Deref, DerefMut)]
 struct BirdSpawnTimer {
@@ -98,18 +91,10 @@ fn spawn_birds(
             Obstacle,
             Bird,
             Collider,
-            HorizontalMove { speed: 500. },
+            Movement { x: -500., y: 0. },
         );
         cmd.spawn(sprite);
     }
-}
-
-fn move_obstacles(
-    time: Res<Time>,
-    mut q: Query<(&mut HorizontalMove, &mut Transform), With<Obstacle>>,
-) {
-    q.iter_mut()
-        .for_each(|mut x| x.1.translation.x -= x.0.speed * time.delta_seconds());
 }
 
 fn bird_animation(
@@ -154,8 +139,11 @@ fn kill_obstacles(
 ) {
     ev.iter()
         .filter(|x| x.player_state != AttackState::NotAttacking)
-        .for_each(|x| {
-            cmd.entity(x.obstacle).remove::<Obstacle>().insert(Dead);
+        .for_each(|o| {
+            cmd.entity(o.obstacle).remove::<Obstacle>().insert(Dead);
+            let x = (o.obstacle_pos.x - o.player_pos.x) * (rand::random::<f32>() + 1.);
+            let y = (o.obstacle_pos.y - o.player_pos.y) * (rand::random::<f32>() + 1.);
+            let force = Vec2 { x, y }.normalize() * 1000.;
             cmd.spawn((
                 SpriteBundle {
                     texture: sprites.dead.clone(),
@@ -167,14 +155,16 @@ fn kill_obstacles(
                         ..Default::default()
                     },
                     transform: Transform {
-                        translation: x.obstacle_pos,
+                        translation: o.obstacle_pos,
                         ..Default::default()
                     },
                     ..Default::default()
                 },
-                VerticalMove {
-                    speed: VerticalMove::JUMP_STRENGTH,
+                Movement {
+                    x: force.x,
+                    y: force.y,
                 },
+                Gravity::default(),
                 Obstacle,
             ));
         });

@@ -14,6 +14,7 @@ impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<CollisionEvent>()
             .add_system(gravity.label("gravity").before("movement"))
+            .add_system(face_movement_direction.after("gravity"))
             .add_system(move_bodies.label("movement").before("collision"))
             .add_system(collision_detection.label("collision"));
     }
@@ -26,6 +27,12 @@ pub struct Collider;
 pub struct Movement {
     pub x: f32,
     pub y: f32,
+}
+
+#[derive(Component)]
+pub struct FaceMovementDirection {
+    /// The direction sprite faces naturally
+    pub neutral: Vec2,
 }
 
 #[derive(Component, Deref, DerefMut)]
@@ -105,4 +112,13 @@ fn gravity(time: Res<Time>, mut affected: Query<(&mut Movement, &Gravity)>) {
         o.0.x = o.0.x * (1.0 - speed.x);
         o.0.y = o.0.y * (1.0 - speed.y) + (Gravity::MAX_GRAVITY * speed.y);
     });
+}
+
+fn face_movement_direction(mut bodies: Query<(&mut Transform, &Movement, &FaceMovementDirection)>) {
+    bodies.for_each_mut(|mut o| {
+        let dir = Vec2 { x: o.1.x, y: o.1.y }.normalize();
+        let neutral = o.2.neutral;
+        let angle = neutral.angle_between(dir);
+        o.0.rotation = Quat::from_euler(EulerRot::XYZ, 0., 0., angle);
+    })
 }

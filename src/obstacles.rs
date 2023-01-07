@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
-    physics::{Collider, CollisionEvent, Gravity, Movement},
+    physics::{Collider, CollisionEvent, Gravity, Movement, FaceMovementDirection},
     player::AttackState,
 };
 
@@ -165,6 +165,7 @@ fn kill_obstacles(
                     y: force.y,
                 },
                 Gravity::default(),
+                FaceMovementDirection { neutral: Vec2 { x: 0., y: -1. } },
                 Obstacle,
             ));
         });

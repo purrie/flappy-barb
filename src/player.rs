@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    cleanup::Dead,
     game::GameState,
     physics::{Gravity, Movement},
 };
@@ -109,8 +110,15 @@ fn player_on_side(
     player.translation.x = cam.left + 256.;
 }
 
-fn player_dead(mut player: Query<(&mut Sprite, &mut Movement), With<Player>>) {
+fn player_dead(
+    mut player: Query<(&mut Sprite, &mut Movement, Entity), With<Player>>,
+    mut cmd: Commands,
+) {
     let mut player = player.get_single_mut().unwrap();
     player.0.color = Color::GREEN;
     player.1.y = PLAYER_JUMP_STRENGTH;
+
+    cmd.entity(player.2)
+        .remove::<Player>()
+        .insert(Dead { timer: 1.0 });
 }

@@ -224,7 +224,7 @@ fn remove_obstacle(
         .iter()
         .filter(|x| x.1.translation.x < (op.left - 128.) || x.1.translation.y < (op.bottom - 128.))
         .for_each(|x| {
-            cmd.entity(x.0).remove::<Obstacle>().insert(Dead);
+            cmd.entity(x.0).remove::<Obstacle>().insert(Dead::default());
             if x.2.defeated == false && x.2.kind == ObstacleKind::Bird {
                 ev.send(ScoreEvent::ResetCombo)
             }
@@ -240,7 +240,9 @@ fn kill_obstacles(
     ev.iter()
         .filter(|x| x.player_state != AttackState::NotAttacking)
         .for_each(|o| {
-            cmd.entity(o.obstacle).remove::<Obstacle>().insert(Dead);
+            cmd.entity(o.obstacle)
+                .remove::<Obstacle>()
+                .insert(Dead::default());
             let x = (o.obstacle_pos.x - o.player_pos.x) * (rand::random::<f32>() + 1.);
             let y = (o.obstacle_pos.y - o.player_pos.y) * (rand::random::<f32>() + 1.);
             let force = Vec2 { x, y }.normalize() * 1000.;
@@ -266,10 +268,7 @@ fn kill_obstacles(
                             },
                             ..Default::default()
                         },
-                        Movement {
-                            x: -300.,
-                            y: -200.,
-                        },
+                        Movement { x: -300., y: -200. },
                     ));
                 }
                 ObstacleKind::Bird => {

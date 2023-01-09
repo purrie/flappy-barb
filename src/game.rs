@@ -6,16 +6,19 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        let play_update = SystemSet::on_update(GameState::Playing)
-            .with_system(kill_player.after("collision"));
+        let play_update =
+            SystemSet::on_update(GameState::Playing).with_system(kill_player.after("collision"));
 
         let menu_update =
             SystemSet::on_update(GameState::MainMenu).with_system(start_game_shortcut);
 
+        let end_update = SystemSet::on_update(GameState::End).with_system(start_game_shortcut);
+
         app.add_state(GameState::MainMenu)
             .add_startup_system(make_camera)
             .add_system_set(menu_update)
-            .add_system_set(play_update);
+            .add_system_set(play_update)
+            .add_system_set(end_update);
     }
 }
 
@@ -45,4 +48,3 @@ fn start_game_shortcut(input: Res<Input<KeyCode>>, mut state: ResMut<State<GameS
         state.set(GameState::Playing).unwrap();
     }
 }
-

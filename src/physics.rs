@@ -5,7 +5,8 @@ use bevy::{
 
 use crate::{
     cleanup::Dead,
-    player::{AttackState, Player}, obstacles::{Obstacle, ObstacleKind},
+    obstacles::{Obstacle, ObstacleKind},
+    player::{AttackState, Player},
 };
 
 pub struct PhysicsPlugin;

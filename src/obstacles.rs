@@ -87,12 +87,12 @@ fn load_birds(mut cmd: Commands, asset_server: Res<AssetServer>) {
 
 fn setup_obstacle_spawn_timer(mut cmd: Commands) {
     let birb_time = BirdSpawnTimer {
-        timer: Timer::new(Duration::new(2, 0), TimerMode::Repeating),
+        timer: Timer::new(Duration::new(1, 0), TimerMode::Once),
     };
     cmd.insert_resource(birb_time);
 
     let tree_time = TreeSpawnTimer {
-        timer: Timer::new(Duration::new(2, 0), TimerMode::Repeating),
+        timer: Timer::new(Duration::new(1, 0), TimerMode::Once),
     };
     cmd.insert_resource(tree_time);
 }
@@ -105,6 +105,9 @@ fn spawn_birds(
     camera: Query<&OrthographicProjection>,
 ) {
     if timer.tick(time.delta()).just_finished() {
+        let duration = Duration::new(1, rand::random::<u32>() % 1000000000);
+        timer.set_duration(duration);
+        timer.reset();
         let op = camera.get_single().unwrap();
         let rand_height: f32 = rand::random::<f32>();
         let height = (rand_height * 0.6) + 0.2;
@@ -171,6 +174,9 @@ fn spawn_tree_obstacles(
     camera: Query<&OrthographicProjection>,
 ) {
     if timer.tick(time.delta()).just_finished() {
+        let duration = Duration::new(1, rand::random::<u32>());
+        timer.set_duration(duration);
+        timer.reset();
         let op = camera.get_single().unwrap();
         let height = op.bottom + ObstacleAssets::TREE_SPRITE_SIZE_Y / 2.;
 

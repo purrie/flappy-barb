@@ -14,10 +14,11 @@ pub struct ObstaclesPlugin;
 
 impl Plugin for ObstaclesPlugin {
     fn build(&self, app: &mut App) {
-        let start = SystemSet::on_enter(GameState::Playing).with_system(setup_bird_spawn_timer);
+        let start = SystemSet::on_enter(GameState::Playing).with_system(setup_obstacle_spawn_timer);
         let update = SystemSet::on_update(GameState::Playing)
             .with_system(spawn_birds)
             .with_system(bird_animation)
+            .with_system(spawn_tree_obstacles)
             .with_system(remove_obstacle.before("cleanup"))
             .with_system(kill_obstacles.before("cleanup").after("collision"));
 
@@ -30,47 +31,75 @@ impl Plugin for ObstaclesPlugin {
 #[derive(Component, Default)]
 pub struct Obstacle {
     pub defeated: bool,
+    pub kind: ObstacleKind,
+}
+
+#[derive(Default, Clone, PartialEq)]
+pub enum ObstacleKind {
+    Tree,
+    #[default]
+    Bird,
 }
 
 #[derive(Component)]
 struct Bird;
+
+#[derive(Component)]
+struct Tree;
 
 #[derive(Resource, Deref, DerefMut)]
 struct BirdSpawnTimer {
     timer: Timer,
 }
 
-#[derive(Resource, Default)]
-struct BirdSprites {
-    first: Handle<Image>,
-    second: Handle<Image>,
-    dead: Handle<Image>,
+#[derive(Resource, Deref, DerefMut)]
+struct TreeSpawnTimer {
+    timer: Timer,
 }
 
-impl BirdSprites {
-    pub const SPRITE_SIZE_X: f32 = 128.;
-    pub const SPRITE_SIZE_Y: f32 = 128.;
+#[derive(Resource, Default)]
+struct ObstacleAssets {
+    bird_fly_1: Handle<Image>,
+    bird_fly_2: Handle<Image>,
+    bird_dead: Handle<Image>,
+    tree_normal: Handle<Image>,
+    tree_dead: Handle<Image>,
+}
+
+impl ObstacleAssets {
+    pub const BIRD_SPRITE_SIZE_X: f32 = 128.;
+    pub const BIRD_SPRITE_SIZE_Y: f32 = 128.;
+
+    pub const TREE_SPRITE_SIZE_X: f32 = 256.;
+    pub const TREE_SPRITE_SIZE_Y: f32 = 256.;
 }
 
 fn load_birds(mut cmd: Commands, asset_server: Res<AssetServer>) {
-    let bs = BirdSprites {
-        first: asset_server.load("sprites/bird-fly-1.png"),
-        second: asset_server.load("sprites/bird-fly-2.png"),
-        dead: asset_server.load("sprites/bird-dead.png"),
+    let bs = ObstacleAssets {
+        bird_fly_1: asset_server.load("sprites/bird-fly-1.png"),
+        bird_fly_2: asset_server.load("sprites/bird-fly-2.png"),
+        bird_dead: asset_server.load("sprites/bird-dead.png"),
+        tree_normal: asset_server.load("sprites/tree-full.png"),
+        tree_dead: asset_server.load("sprites/tree-cut.png"),
     };
     cmd.insert_resource(bs);
 }
 
-fn setup_bird_spawn_timer(mut cmd: Commands) {
+fn setup_obstacle_spawn_timer(mut cmd: Commands) {
     let birb_time = BirdSpawnTimer {
         timer: Timer::new(Duration::new(2, 0), TimerMode::Repeating),
     };
     cmd.insert_resource(birb_time);
+
+    let tree_time = TreeSpawnTimer {
+        timer: Timer::new(Duration::new(2, 0), TimerMode::Repeating),
+    };
+    cmd.insert_resource(tree_time);
 }
 
 fn spawn_birds(
     mut cmd: Commands,
-    sprites: Res<BirdSprites>,
+    sprites: Res<ObstacleAssets>,
     mut timer: ResMut<BirdSpawnTimer>,
     time: Res<Time>,
     camera: Query<&OrthographicProjection>,
@@ -80,14 +109,14 @@ fn spawn_birds(
         let rand_height: f32 = rand::random::<f32>();
         let height = (rand_height * 0.6) + 0.2;
         let height = op.top * (1. - height) + op.bottom * height;
-        let img = sprites.first.clone();
+        let img = sprites.bird_fly_1.clone();
         let sprite = (
             SpriteBundle {
                 texture: img,
                 sprite: Sprite {
                     custom_size: Some(Vec2 {
-                        x: BirdSprites::SPRITE_SIZE_X,
-                        y: BirdSprites::SPRITE_SIZE_Y,
+                        x: ObstacleAssets::BIRD_SPRITE_SIZE_X,
+                        y: ObstacleAssets::BIRD_SPRITE_SIZE_Y,
                     }),
                     ..Default::default()
                 },
@@ -101,7 +130,10 @@ fn spawn_birds(
                 },
                 ..Default::default()
             },
-            Obstacle::default(),
+            Obstacle {
+                kind: ObstacleKind::Bird,
+                ..default()
+            },
             Bird,
             Collider,
             Movement { x: -500., y: 0. },
@@ -112,7 +144,7 @@ fn spawn_birds(
 
 fn bird_animation(
     mut cmd: Commands,
-    sprites: Res<BirdSprites>,
+    sprites: Res<ObstacleAssets>,
     birds: Query<(Entity, &Transform), (With<Bird>, With<Obstacle>)>,
 ) {
     birds.for_each(|x| {
@@ -122,13 +154,57 @@ fn bird_animation(
         let tick = x.1.translation.x.abs() as i32 % 200;
         match tick >= 100 {
             true => {
-                cmd.insert(sprites.first.clone());
+                cmd.insert(sprites.bird_fly_1.clone());
             }
             false => {
-                cmd.insert(sprites.second.clone());
+                cmd.insert(sprites.bird_fly_2.clone());
             }
         }
     })
+}
+
+fn spawn_tree_obstacles(
+    mut cmd: Commands,
+    sprites: Res<ObstacleAssets>,
+    mut timer: ResMut<TreeSpawnTimer>,
+    time: Res<Time>,
+    camera: Query<&OrthographicProjection>,
+) {
+    if timer.tick(time.delta()).just_finished() {
+        let op = camera.get_single().unwrap();
+        let height = op.bottom + ObstacleAssets::TREE_SPRITE_SIZE_Y / 2.;
+
+        let img = sprites.tree_normal.clone();
+        let sprite = (
+            SpriteBundle {
+                texture: img,
+                sprite: Sprite {
+                    custom_size: Some(Vec2 {
+                        x: ObstacleAssets::TREE_SPRITE_SIZE_X,
+                        y: ObstacleAssets::TREE_SPRITE_SIZE_Y,
+                    }),
+                    ..Default::default()
+                },
+                transform: Transform {
+                    translation: Vec3 {
+                        x: op.right + 64.,
+                        y: height,
+                        z: 0.,
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            Obstacle {
+                kind: ObstacleKind::Tree,
+                ..default()
+            },
+            Tree,
+            Collider,
+            Movement { x: -300., y: 0. },
+        );
+        cmd.spawn(sprite);
+    }
 }
 
 fn remove_obstacle(
@@ -140,10 +216,10 @@ fn remove_obstacle(
     let op = camera_view.get_single().unwrap();
     obstacles
         .iter()
-        .filter(|x| x.1.translation.x < (op.left - 64.) || x.1.translation.y < (op.bottom - 64.))
+        .filter(|x| x.1.translation.x < (op.left - 128.) || x.1.translation.y < (op.bottom - 128.))
         .for_each(|x| {
             cmd.entity(x.0).remove::<Obstacle>().insert(Dead);
-            if x.2.defeated == false {
+            if x.2.defeated == false && x.2.kind == ObstacleKind::Bird {
                 ev.send(ScoreEvent::ResetCombo)
             }
         });
@@ -152,7 +228,7 @@ fn remove_obstacle(
 fn kill_obstacles(
     mut cmd: Commands,
     mut ev: EventReader<CollisionEvent>,
-    sprites: Res<BirdSprites>,
+    sprites: Res<ObstacleAssets>,
     mut score: EventWriter<ScoreEvent>,
 ) {
     ev.iter()
@@ -162,32 +238,62 @@ fn kill_obstacles(
             let x = (o.obstacle_pos.x - o.player_pos.x) * (rand::random::<f32>() + 1.);
             let y = (o.obstacle_pos.y - o.player_pos.y) * (rand::random::<f32>() + 1.);
             let force = Vec2 { x, y }.normalize() * 1000.;
-            cmd.spawn((
-                SpriteBundle {
-                    texture: sprites.dead.clone(),
-                    sprite: Sprite {
-                        custom_size: Some(Vec2 {
-                            x: BirdSprites::SPRITE_SIZE_X,
-                            y: BirdSprites::SPRITE_SIZE_Y,
-                        }),
-                        ..Default::default()
-                    },
-                    transform: Transform {
-                        translation: o.obstacle_pos,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                Movement {
-                    x: force.x,
-                    y: force.y,
-                },
-                Gravity::default(),
-                FaceMovementDirection {
-                    neutral: Vec2 { x: 0., y: -1. },
-                },
-                Obstacle { defeated: true },
-            ));
-            score.send(ScoreEvent::Add);
+            let mut corpse = cmd.spawn(Obstacle {
+                defeated: true,
+                kind: o.obstacle_kind.clone(),
+            });
+            match o.obstacle_kind {
+                ObstacleKind::Tree => {
+                    corpse.insert((
+                        SpriteBundle {
+                            texture: sprites.tree_dead.clone(),
+                            sprite: Sprite {
+                                custom_size: Some(Vec2 {
+                                    x: ObstacleAssets::TREE_SPRITE_SIZE_X,
+                                    y: ObstacleAssets::TREE_SPRITE_SIZE_Y,
+                                }),
+                                ..Default::default()
+                            },
+                            transform: Transform {
+                                translation: o.obstacle_pos,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        Movement {
+                            x: -300.,
+                            y: -200.,
+                        },
+                    ));
+                }
+                ObstacleKind::Bird => {
+                    corpse.insert((
+                        SpriteBundle {
+                            texture: sprites.bird_dead.clone(),
+                            sprite: Sprite {
+                                custom_size: Some(Vec2 {
+                                    x: ObstacleAssets::BIRD_SPRITE_SIZE_X,
+                                    y: ObstacleAssets::BIRD_SPRITE_SIZE_Y,
+                                }),
+                                ..Default::default()
+                            },
+                            transform: Transform {
+                                translation: o.obstacle_pos,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        Movement {
+                            x: force.x,
+                            y: force.y,
+                        },
+                        Gravity::default(),
+                        FaceMovementDirection {
+                            neutral: Vec2 { x: 0., y: -1. },
+                        },
+                    ));
+                    score.send(ScoreEvent::Add);
+                }
+            };
         });
 }

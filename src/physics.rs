@@ -5,7 +5,7 @@ use bevy::{
 
 use crate::{
     cleanup::Dead,
-    player::{AttackState, Player},
+    player::{AttackState, Player}, obstacles::{Obstacle, ObstacleKind},
 };
 
 pub struct PhysicsPlugin;
@@ -59,12 +59,13 @@ pub struct CollisionEvent {
     pub player_pos: Vec3,
     pub obstacle: Entity,
     pub obstacle_pos: Vec3,
+    pub obstacle_kind: ObstacleKind,
 }
 
 fn collision_detection(
     mut sender: EventWriter<CollisionEvent>,
     player: Query<(&Sprite, &Transform, &Player, Entity)>,
-    obstacles: Query<(&Sprite, &Transform, Entity), (With<Collider>, Without<Dead>)>,
+    obstacles: Query<(&Sprite, &Transform, Entity, &Obstacle), (With<Collider>, Without<Dead>)>,
 ) {
     let Ok(pl) = player.get_single() else {
         return;
@@ -80,7 +81,7 @@ fn collision_detection(
             let Some(c) = collide(o_pos, o_size, p_pos, p_size) else {
             return None;
         };
-            Some((c, x.2, x.1))
+            Some((c, x.2, x.1, x.3))
         })
         .for_each(|x| {
             let ev = CollisionEvent {
@@ -90,6 +91,7 @@ fn collision_detection(
                 player_pos: p_pos,
                 obstacle: x.1,
                 obstacle_pos: x.2.translation,
+                obstacle_kind: x.3.kind.clone(),
             };
             sender.send(ev);
         });

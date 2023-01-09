@@ -8,6 +8,7 @@ impl Plugin for GameUiPlugin {
     fn build(&self, app: &mut App) {
         let start_menu = SystemSet::on_enter(GameState::MainMenu).with_system(spawn_main_manu);
         let update_menu = SystemSet::on_update(GameState::MainMenu).with_system(main_menu);
+        let exit_menu = SystemSet::on_exit(GameState::MainMenu).with_system(clean_main_menu);
 
         let start_game = SystemSet::on_enter(GameState::Playing).with_system(spawn_scoreboard);
         let update_game = SystemSet::on_update(GameState::Playing).with_system(score_event);
@@ -17,6 +18,7 @@ impl Plugin for GameUiPlugin {
             .add_startup_system(load_font)
             .add_system_set(start_menu)
             .add_system_set(update_menu)
+            .add_system_set(exit_menu)
             .add_system_set(start_game)
             .add_system_set(update_game)
             .add_system_set(exit_game);
@@ -146,4 +148,8 @@ fn main_menu(
         Interaction::Hovered => *col = Color::GRAY.into(),
         Interaction::None => *col = Color::WHITE.into(),
     })
+}
+
+fn clean_main_menu(mut cmd: Commands, butt: Query<Entity, With<Interaction>>) {
+    butt.for_each(|x| { cmd.entity(x).insert(Dead); });
 }

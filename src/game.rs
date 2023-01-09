@@ -6,11 +6,15 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        let play_update =
-            SystemSet::on_update(GameState::Playing).with_system(kill_player.after("collision"));
+        let play_update = SystemSet::on_update(GameState::Playing)
+            .with_system(kill_player.after("collision"));
+
+        let menu_update =
+            SystemSet::on_update(GameState::MainMenu).with_system(start_game_shortcut);
 
         app.add_state(GameState::MainMenu)
             .add_startup_system(make_camera)
+            .add_system_set(menu_update)
             .add_system_set(play_update);
     }
 }
@@ -35,3 +39,10 @@ fn kill_player(mut ev: EventReader<CollisionEvent>, mut end: ResMut<State<GameSt
         })
         .for_each(|_| end.set(GameState::End).unwrap());
 }
+
+fn start_game_shortcut(input: Res<Input<KeyCode>>, mut state: ResMut<State<GameState>>) {
+    if input.just_pressed(KeyCode::Return) {
+        state.set(GameState::Playing).unwrap();
+    }
+}
+

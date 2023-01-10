@@ -40,11 +40,17 @@ fn kill_player(mut ev: EventReader<CollisionEvent>, mut end: ResMut<State<GameSt
             let dis = x.player_pos.distance(x.obstacle_pos);
             dis < 100.0
         })
-        .for_each(|_| end.set(GameState::End).unwrap());
+        .for_each(|_| {
+            if let Err(e) = end.set(GameState::End) {
+                println!("Error: {e}");
+            }
+        });
 }
 
 fn start_game_shortcut(input: Res<Input<KeyCode>>, mut state: ResMut<State<GameState>>) {
     if input.just_pressed(KeyCode::Return) {
-        state.set(GameState::Playing).unwrap();
+        if let Err(e) = state.set(GameState::Playing) {
+            println!("Error: {e}");
+        }
     }
 }

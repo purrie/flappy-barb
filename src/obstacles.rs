@@ -17,14 +17,17 @@ impl Plugin for ObstaclesPlugin {
         let start = SystemSet::on_enter(GameState::Playing).with_system(setup_obstacle_spawn_timer);
         let update = SystemSet::on_update(GameState::Playing)
             .with_system(spawn_birds)
-            .with_system(bird_animation)
+            .with_system(bird_animation.before("cleanup"))
             .with_system(spawn_tree_obstacles)
             .with_system(remove_obstacle.before("cleanup"))
             .with_system(kill_obstacles.before("cleanup").after("collision"));
 
+        let cleanup = SystemSet::on_exit(GameState::End).with_system(cleanup_obstacles);
+
         app.add_startup_system(load_birds)
             .add_system_set(start)
-            .add_system_set(update);
+            .add_system_set(update)
+            .add_system_set(cleanup);
     }
 }
 
@@ -148,7 +151,7 @@ fn spawn_birds(
 fn bird_animation(
     mut cmd: Commands,
     sprites: Res<ObstacleAssets>,
-    birds: Query<(Entity, &Transform), (With<Bird>, With<Obstacle>)>,
+    birds: Query<(Entity, &Transform), (With<Bird>, With<Obstacle>, Without<Dead>)>,
 ) {
     birds.for_each(|x| {
         let Some(mut cmd) = cmd.get_entity(x.0) else {
@@ -301,4 +304,10 @@ fn kill_obstacles(
                 }
             };
         });
+}
+
+fn cleanup_obstacles(mut cmd: Commands, obs: Query<Entity, With<Obstacle>>) {
+    obs.for_each(|x| {
+        cmd.entity(x).insert(Dead::default());
+    });
 }

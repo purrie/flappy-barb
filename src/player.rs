@@ -18,9 +18,13 @@ impl Plugin for PlayerPlugin {
             .with_system(animate_player);
         let end = SystemSet::on_exit(GameState::Playing).with_system(player_dead);
 
+        let cleanup =
+            SystemSet::on_exit(GameState::End).with_system(clean_player.before("cleanup"));
+
         app.add_system_set(start)
             .add_system_set(update)
-            .add_system_set(end);
+            .add_system_set(end)
+            .add_system_set(cleanup);
     }
 }
 
@@ -38,6 +42,9 @@ pub enum AttackState {
 pub struct Player {
     pub attack_state: AttackState,
 }
+
+#[derive(Component)]
+pub struct PlayerCorpse;
 
 fn jump_system(input: Res<Input<KeyCode>>, mut player: Query<&mut Movement, With<Player>>) {
     if input.just_pressed(KeyCode::Space) {
@@ -118,7 +125,11 @@ fn player_dead(
     player.0.color = Color::GREEN;
     player.1.y = PLAYER_JUMP_STRENGTH;
 
-    cmd.entity(player.2)
-        .remove::<Player>()
-        .insert(Dead { timer: 1.0 });
+    cmd.entity(player.2).remove::<Player>().insert(PlayerCorpse);
+}
+
+fn clean_player(mut cmd: Commands, player: Query<Entity, With<PlayerCorpse>>) {
+    player.for_each(|x| {
+        cmd.entity(x).insert(Dead::default());
+    })
 }

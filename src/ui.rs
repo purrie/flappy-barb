@@ -228,6 +228,12 @@ fn spawn_end_score(mut cmd: Commands, ui: Res<UiAssets>, score: Res<Score>) {
                 background_color: Color::GRAY.into(),
                 style: Style {
                     align_self: AlignSelf::Center,
+                    padding: UiRect {
+                        top: Val::Px(5.0),
+                        bottom: Val::Px(5.0),
+                        left: Val::Px(5.0),
+                        right: Val::Px(5.0),
+                    },
                     ..default()
                 },
                 ..default()
@@ -254,7 +260,7 @@ fn end_screen_menu(
             *b.1 = Color::DARK_GRAY.into();
             state.set(GameState::Playing).unwrap();
         }
-        Interaction::Hovered => *b.1 = Color::ANTIQUE_WHITE.into(),
+        Interaction::Hovered => *b.1 = Color::DARK_GRAY.into(),
         Interaction::None => *b.1 = Color::GRAY.into(),
     })
 }

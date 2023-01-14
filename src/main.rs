@@ -1,6 +1,7 @@
 mod cleanup;
 mod game;
 mod obstacles;
+mod particles;
 mod physics;
 mod player;
 mod ui;
@@ -13,6 +14,7 @@ use bevy::{
 use cleanup::CleanerPlugin;
 use game::GamePlugin;
 use obstacles::ObstaclesPlugin;
+use particles::ParticlePlugin;
 use physics::PhysicsPlugin;
 use player::PlayerPlugin;
 use ui::GameUiPlugin;
@@ -44,5 +46,6 @@ fn main() {
         .add_plugin(GameUiPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(CleanerPlugin)
+        .add_plugin(ParticlePlugin)
         .run();
 }

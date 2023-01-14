@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use crate::{
     cleanup::Dead,
     game::GameState,
+    particles::{EmissionDirection, ParticleEmitter},
     physics::{Collider, CollisionEvent, FaceMovementDirection, Gravity, Movement},
     player::AttackState,
     ui::ScoreEvent,
@@ -253,6 +254,7 @@ fn kill_obstacles(
                 defeated: true,
                 kind: o.obstacle_kind.clone(),
             });
+            let hit_location = (o.obstacle_pos + o.player_pos) / 2.0;
             match o.obstacle_kind {
                 ObstacleKind::Tree => {
                     corpse.insert((
@@ -272,6 +274,16 @@ fn kill_obstacles(
                             ..Default::default()
                         },
                         Movement { x: -300., y: -200. },
+                    ));
+                    cmd.spawn((
+                        ParticleEmitter::new(3, Duration::new(0, 500), TimerMode::Repeating)
+                            .with_color(Color::GREEN)
+                            .with_direction(EmissionDirection::Global(force)),
+                        Transform {
+                            translation: hit_location,
+                            ..default()
+                        },
+                        Dead { timer: 0.1 },
                     ));
                 }
                 ObstacleKind::Bird => {
@@ -299,6 +311,19 @@ fn kill_obstacles(
                         FaceMovementDirection {
                             neutral: Vec2 { x: 0., y: -1. },
                         },
+                        ParticleEmitter::new(1, Duration::new(0, 50000), TimerMode::Repeating)
+                            .with_color(Color::RED)
+                            .with_direction(EmissionDirection::Local(Vec2::Y)),
+                    ));
+                    cmd.spawn((
+                        ParticleEmitter::new(3, Duration::new(0, 500), TimerMode::Repeating)
+                            .with_color(Color::RED)
+                            .with_direction(EmissionDirection::Global(force)),
+                        Transform {
+                            translation: hit_location,
+                            ..default()
+                        },
+                        Dead { timer: 0.1 },
                     ));
                     score.send(ScoreEvent::Add);
                 }

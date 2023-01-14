@@ -60,7 +60,7 @@ fn kill_player(mut ev: EventReader<CollisionEvent>, mut end: ResMut<State<GameSt
 }
 
 fn start_game_shortcut(input: Res<Input<KeyCode>>, mut state: ResMut<State<GameState>>) {
-    if input.just_pressed(KeyCode::Return) {
+    if input.just_pressed(KeyCode::Space) {
         if let Err(e) = state.set(GameState::Playing) {
             println!("Error: {e}");
         }

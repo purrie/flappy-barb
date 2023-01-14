@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
-    game::GameState,
+    game::{GameOverEvent, GameState},
     particles::{EmissionDirection, ParticleEmitter},
     physics::{Collider, CollisionEvent, FaceMovementDirection, Gravity, Movement},
     player::AttackState,
@@ -21,7 +21,7 @@ impl Plugin for ObstaclesPlugin {
             .with_system(bird_animation.before("cleanup"))
             .with_system(spawn_tree_obstacles)
             .with_system(remove_obstacle.before("cleanup"))
-            .with_system(kill_obstacles.before("cleanup").after("collision"));
+            .with_system(obstacle_collision.before("game_over").after("collision"));
 
         let cleanup = SystemSet::on_exit(GameState::End).with_system(cleanup_obstacles);
 
@@ -144,7 +144,10 @@ fn spawn_birds(
             },
             Bird,
             Collider,
-            Movement { x: -500.0 + random_speed as f32, y: 0. },
+            Movement {
+                x: -500.0 + random_speed as f32,
+                y: 0.,
+            },
         );
         cmd.spawn(sprite);
     }
@@ -236,100 +239,114 @@ fn remove_obstacle(
         });
 }
 
-fn kill_obstacles(
+fn obstacle_collision(
     mut cmd: Commands,
     mut ev: EventReader<CollisionEvent>,
     sprites: Res<ObstacleAssets>,
     mut score: EventWriter<ScoreEvent>,
+    mut game_over: EventWriter<GameOverEvent>,
 ) {
-    ev.iter()
-        .filter(|x| x.player_state != AttackState::NotAttacking)
-        .for_each(|o| {
-            cmd.entity(o.obstacle)
-                .remove::<Obstacle>()
-                .insert(Dead::default());
-            let x = (o.obstacle_pos.x - o.player_pos.x) * (rand::random::<f32>() + 1.);
-            let y = (o.obstacle_pos.y - o.player_pos.y) * (rand::random::<f32>() + 1.);
-            let force = Vec2 { x, y }.normalize() * 1000.;
-            let mut corpse = cmd.spawn(Obstacle {
-                defeated: true,
-                kind: o.obstacle_kind.clone(),
-            });
-            let hit_location = (o.obstacle_pos + o.player_pos) / 2.0;
-            match o.obstacle_kind {
-                ObstacleKind::Tree => {
-                    corpse.insert((
-                        SpriteBundle {
-                            texture: sprites.tree_dead.clone(),
-                            sprite: Sprite {
-                                custom_size: Some(Vec2 {
-                                    x: ObstacleAssets::TREE_SPRITE_SIZE_X,
-                                    y: ObstacleAssets::TREE_SPRITE_SIZE_Y,
-                                }),
-                                ..Default::default()
-                            },
-                            transform: Transform {
-                                translation: o.obstacle_pos,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        Movement { x: -300., y: -200. },
-                    ));
-                    cmd.spawn((
-                        ParticleEmitter::new(3, Duration::new(0, 500), TimerMode::Repeating)
-                            .with_color(Color::GREEN)
-                            .with_direction(EmissionDirection::Global(force)),
-                        Transform {
-                            translation: hit_location,
-                            ..default()
-                        },
-                        Dead { timer: 0.1 },
-                    ));
-                }
-                ObstacleKind::Bird => {
-                    corpse.insert((
-                        SpriteBundle {
-                            texture: sprites.bird_dead.clone(),
-                            sprite: Sprite {
-                                custom_size: Some(Vec2 {
-                                    x: ObstacleAssets::BIRD_SPRITE_SIZE_X,
-                                    y: ObstacleAssets::BIRD_SPRITE_SIZE_Y,
-                                }),
-                                ..Default::default()
-                            },
-                            transform: Transform {
-                                translation: o.obstacle_pos,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        Movement {
-                            x: force.x,
-                            y: force.y,
-                        },
-                        Gravity::default(),
-                        FaceMovementDirection {
-                            neutral: Vec2 { x: 0., y: -1. },
-                        },
-                        ParticleEmitter::new(1, Duration::new(0, 50000), TimerMode::Repeating)
-                            .with_color(Color::RED)
-                            .with_direction(EmissionDirection::Local(Vec2::Y)),
-                    ));
-                    cmd.spawn((
-                        ParticleEmitter::new(3, Duration::new(0, 500), TimerMode::Repeating)
-                            .with_color(Color::RED)
-                            .with_direction(EmissionDirection::Global(force)),
-                        Transform {
-                            translation: hit_location,
-                            ..default()
-                        },
-                        Dead { timer: 0.1 },
-                    ));
-                    score.send(ScoreEvent::Add);
-                }
-            };
-        });
+    ev.iter().for_each(|o| {
+        if o.player_state == AttackState::NotAttacking {
+            if o.player_pos.distance(o.obstacle_pos) < 100.0 {
+                game_over.send_default();
+            }
+            return;
+        }
+        cmd.entity(o.obstacle)
+            .remove::<Obstacle>()
+            .insert(Dead::default());
+
+        let x = (o.obstacle_pos.x - o.player_pos.x) * (rand::random::<f32>() + 1.);
+        let y = (o.obstacle_pos.y - o.player_pos.y) * (rand::random::<f32>() + 1.);
+        let force = Vec2 { x, y }.normalize() * 1000.;
+        let hit_location = (o.obstacle_pos + o.player_pos) / 2.0;
+
+        match o.obstacle_kind {
+            ObstacleKind::Tree => {
+                spawn_tree_corpse(&mut cmd, &sprites, o.obstacle_pos);
+                spawn_hit(&mut cmd, Color::GREEN, hit_location, force);
+            }
+            ObstacleKind::Bird => {
+                spawn_bird_corpse(&mut cmd, &sprites, o.obstacle_pos, force);
+                spawn_hit(&mut cmd, Color::RED, hit_location, force);
+                score.send(ScoreEvent::Add);
+            }
+        };
+    });
+}
+
+fn spawn_hit(cmd: &mut Commands, color: Color, location: Vec3, force: Vec2) {
+    cmd.spawn((
+        ParticleEmitter::new(3, Duration::new(0, 500), TimerMode::Repeating)
+            .with_color(color)
+            .with_direction(EmissionDirection::Global(force)),
+        Transform {
+            translation: location,
+            ..default()
+        },
+        Dead { timer: 0.1 },
+    ));
+}
+
+fn spawn_tree_corpse(cmd: &mut Commands, sprites: &ObstacleAssets, location: Vec3) {
+    cmd.spawn((
+        Obstacle {
+            defeated: true,
+            kind: ObstacleKind::Tree,
+        },
+        SpriteBundle {
+            texture: sprites.tree_dead.clone(),
+            sprite: Sprite {
+                custom_size: Some(Vec2 {
+                    x: ObstacleAssets::TREE_SPRITE_SIZE_X,
+                    y: ObstacleAssets::TREE_SPRITE_SIZE_Y,
+                }),
+                ..Default::default()
+            },
+            transform: Transform {
+                translation: location,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        Movement { x: -300., y: -200. },
+    ));
+}
+
+fn spawn_bird_corpse(cmd: &mut Commands, sprites: &ObstacleAssets, location: Vec3, movement: Vec2) {
+    cmd.spawn((
+        Obstacle {
+            defeated: true,
+            kind: ObstacleKind::Bird,
+        },
+        SpriteBundle {
+            texture: sprites.bird_dead.clone(),
+            sprite: Sprite {
+                custom_size: Some(Vec2 {
+                    x: ObstacleAssets::BIRD_SPRITE_SIZE_X,
+                    y: ObstacleAssets::BIRD_SPRITE_SIZE_Y,
+                }),
+                ..Default::default()
+            },
+            transform: Transform {
+                translation: location,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        Movement {
+            x: movement.x,
+            y: movement.y,
+        },
+        Gravity::default(),
+        FaceMovementDirection {
+            neutral: Vec2 { x: 0., y: -1. },
+        },
+        ParticleEmitter::new(1, Duration::new(0, 50000), TimerMode::Repeating)
+            .with_color(Color::RED)
+            .with_direction(EmissionDirection::Local(Vec2::Y)),
+    ));
 }
 
 fn cleanup_obstacles(mut cmd: Commands, obs: Query<Entity, With<Obstacle>>) {

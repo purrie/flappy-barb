@@ -1,7 +1,5 @@
 use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
 
-use crate::{physics::CollisionEvent, player::AttackState};
-
 const SKY_COLOR: Color = Color::Hsla {
     hue: 200.0,
     saturation: 0.4,
@@ -13,8 +11,8 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        let play_update =
-            SystemSet::on_update(GameState::Playing).with_system(kill_player.after("collision"));
+        let play_update = SystemSet::on_update(GameState::Playing)
+            .with_system(game_over.label("game_over").after("collision"));
 
         let menu_update =
             SystemSet::on_update(GameState::MainMenu).with_system(start_game_shortcut);
@@ -22,12 +20,16 @@ impl Plugin for GamePlugin {
         let end_update = SystemSet::on_update(GameState::End).with_system(start_game_shortcut);
 
         app.add_state(GameState::MainMenu)
+            .add_event::<GameOverEvent>()
             .add_startup_system(make_camera)
             .add_system_set(menu_update)
             .add_system_set(play_update)
             .add_system_set(end_update);
     }
 }
+
+#[derive(Default)]
+pub struct GameOverEvent;
 
 #[derive(PartialEq, Hash, Debug, Eq, Clone)]
 pub enum GameState {
@@ -45,22 +47,17 @@ fn make_camera(mut cmd: Commands) {
     });
 }
 
-fn kill_player(mut ev: EventReader<CollisionEvent>, mut end: ResMut<State<GameState>>) {
-    ev.iter()
-        .filter(|x| x.player_state == AttackState::NotAttacking)
-        .filter(|x| {
-            let dis = x.player_pos.distance(x.obstacle_pos);
-            dis < 100.0
-        })
-        .for_each(|_| {
-            if let Err(e) = end.set(GameState::End) {
-                println!("Error: {e}");
-            }
-        });
+fn game_over(go: EventReader<GameOverEvent>, mut end: ResMut<State<GameState>>) {
+    if go.is_empty() == false {
+        if let Err(e) = end.set(GameState::End) {
+            println!("Error: {e}");
+        }
+        go.clear();
+    }
 }
 
 fn start_game_shortcut(input: Res<Input<KeyCode>>, mut state: ResMut<State<GameState>>) {
-    if input.just_pressed(KeyCode::Space) {
+    if input.just_pressed(KeyCode::Return) {
         if let Err(e) = state.set(GameState::Playing) {
             println!("Error: {e}");
         }

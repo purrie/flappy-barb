@@ -1,6 +1,13 @@
-use bevy::prelude::*;
+use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
 
 use crate::{physics::CollisionEvent, player::AttackState};
+
+const SKY_COLOR: Color = Color::Hsla {
+    hue: 200.0,
+    saturation: 0.4,
+    lightness: 0.7,
+    alpha: 1.0,
+};
 
 pub struct GamePlugin;
 
@@ -30,7 +37,12 @@ pub enum GameState {
 }
 
 fn make_camera(mut cmd: Commands) {
-    cmd.spawn(Camera2dBundle::default());
+    cmd.spawn(Camera2dBundle {
+        camera_2d: Camera2d {
+            clear_color: ClearColorConfig::Custom(SKY_COLOR),
+        },
+        ..default()
+    });
 }
 
 fn kill_player(mut ev: EventReader<CollisionEvent>, mut end: ResMut<State<GameState>>) {

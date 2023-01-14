@@ -117,6 +117,7 @@ fn spawn_birds(
         let height = (rand_height * 0.6) + 0.2;
         let height = op.top * (1. - height) + op.bottom * height;
         let img = sprites.bird_fly_1.clone();
+        let random_speed = rand::random::<i32>() % 200 - 100;
         let sprite = (
             SpriteBundle {
                 texture: img,
@@ -143,7 +144,7 @@ fn spawn_birds(
             },
             Bird,
             Collider,
-            Movement { x: -500., y: 0. },
+            Movement { x: -500.0 + random_speed as f32, y: 0. },
         );
         cmd.spawn(sprite);
     }

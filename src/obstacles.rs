@@ -6,7 +6,10 @@ use crate::{
     cleanup::Dead,
     game::{GameOverEvent, GameState},
     particles::{EmissionDirection, ParticleEmitter},
-    physics::{Collider, CollisionEvent, FaceMovementDirection, Gravity, Movement},
+    physics::{
+        Collider, CollisionEvent, FaceMovementDirection, Gravity, Movement, Projectile,
+        ProjectileCollisionEvent,
+    },
     player::AttackState,
     ui::ScoreEvent,
 };
@@ -21,6 +24,7 @@ impl Plugin for ObstaclesPlugin {
             .with_system(bird_animation.before("cleanup"))
             .with_system(spawn_tree_obstacles)
             .with_system(remove_obstacle.before("cleanup"))
+            .with_system(projectiles.after("projectiles"))
             .with_system(obstacle_collision.before("game_over").after("collision"));
 
         let cleanup = SystemSet::on_exit(GameState::End).with_system(cleanup_obstacles);
@@ -276,6 +280,39 @@ fn obstacle_collision(
     });
 }
 
+fn projectiles(
+    mut cmd: Commands,
+    mut ev: EventReader<ProjectileCollisionEvent>,
+    sprites: Res<ObstacleAssets>,
+    mut score: EventWriter<ScoreEvent>,
+) {
+    ev.iter().for_each(|e| {
+        if e.hit_pos.distance(e.projectile_pos) > 100.0 {
+            return;
+        }
+        cmd.entity(e.hit)
+            .remove::<Obstacle>()
+            .insert(Dead::default());
+
+        let x = (e.hit_pos.x - e.projectile_pos.x) * (rand::random::<f32>() + 1.0);
+        let y = (e.hit_pos.y - e.projectile_pos.y) * (rand::random::<f32>() + 1.0);
+        let force = Vec2 { x, y }.normalize() * 1000.0;
+        let hit_location = (e.hit_pos + e.projectile_pos) / 2.0;
+
+        match e.hit_kind {
+            ObstacleKind::Tree => {
+                spawn_tree_corpse(&mut cmd, &sprites, e.hit_pos);
+                spawn_hit(&mut cmd, Color::GREEN, hit_location, force);
+            }
+            ObstacleKind::Bird => {
+                spawn_bird_corpse(&mut cmd, &sprites, e.hit_pos, force);
+                spawn_hit(&mut cmd, Color::RED, hit_location, force);
+                score.send(ScoreEvent::Add);
+            }
+        }
+    });
+}
+
 fn spawn_hit(cmd: &mut Commands, color: Color, location: Vec3, force: Vec2) {
     cmd.spawn((
         ParticleEmitter::new(3, Duration::new(0, 500), TimerMode::Repeating)
@@ -339,6 +376,7 @@ fn spawn_bird_corpse(cmd: &mut Commands, sprites: &ObstacleAssets, location: Vec
             x: movement.x,
             y: movement.y,
         },
+        Projectile,
         Gravity::default(),
         FaceMovementDirection {
             neutral: Vec2 { x: 0., y: -1. },

@@ -14,15 +14,25 @@ pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<CollisionEvent>()
+            .add_event::<ProjectileCollisionEvent>()
             .add_system(gravity.label("gravity").before("movement"))
             .add_system(face_movement_direction.after("gravity"))
-            .add_system(move_bodies.label("movement").before("collision"))
-            .add_system(collision_detection.label("collision"));
+            .add_system(
+                move_bodies
+                    .label("movement")
+                    .before("collision")
+                    .before("projectiles"),
+            )
+            .add_system(collision_detection.label("collision"))
+            .add_system(projectile_collision.label("projectiles"));
     }
 }
 
 #[derive(Component)]
 pub struct Collider;
+
+#[derive(Component)]
+pub struct Projectile;
 
 #[derive(Component, Default)]
 pub struct Movement {
@@ -63,6 +73,13 @@ pub struct CollisionEvent {
     pub obstacle_kind: ObstacleKind,
 }
 
+pub struct ProjectileCollisionEvent {
+    pub projectile_pos: Vec3,
+    pub hit: Entity,
+    pub hit_pos: Vec3,
+    pub hit_kind: ObstacleKind,
+}
+
 fn collision_detection(
     mut sender: EventWriter<CollisionEvent>,
     player: Query<(&Sprite, &Transform, &Player, Entity)>,
@@ -96,6 +113,29 @@ fn collision_detection(
             };
             sender.send(ev);
         });
+}
+
+fn projectile_collision(
+    mut sender: EventWriter<ProjectileCollisionEvent>,
+    projectiles: Query<(&Sprite, &Transform), With<Projectile>>,
+    obstacles: Query<(&Sprite, &Transform, Entity, &Obstacle), (With<Collider>, Without<Dead>)>,
+) {
+    projectiles.for_each(|(pro_sprite, pro_transform)| {
+        let pro_pos = pro_transform.translation;
+        let pro_size = pro_sprite.custom_size.unwrap();
+        obstacles.for_each(|(obs_sprite, obs_transform, obs_entity, obstacle)| {
+            let obs_pos = obs_transform.translation;
+            let obs_size = obs_sprite.custom_size.unwrap();
+            if let Some(_) = collide(obs_pos, obs_size, pro_pos, pro_size) {
+                sender.send(ProjectileCollisionEvent {
+                    projectile_pos: pro_pos,
+                    hit: obs_entity.clone(),
+                    hit_pos: obs_pos,
+                    hit_kind: obstacle.kind.clone(),
+                })
+            }
+        })
+    })
 }
 
 fn move_bodies(time: Res<Time>, mut bodies: Query<(&Movement, &mut Transform)>) {

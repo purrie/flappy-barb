@@ -27,7 +27,15 @@ fn main() {
         .add_plugin(TransformPlugin::default())
         .add_plugin(HierarchyPlugin::default())
         .add_plugin(InputPlugin::default())
-        .add_plugin(WindowPlugin::default())
+        .add_plugin(WindowPlugin {
+            window: WindowDescriptor {
+                title: String::from("Flappy Barb"),
+                width: 1280.0,
+                height: 720.0,
+                ..default()
+            },
+            ..default()
+        })
         .add_plugin(AssetPlugin {
             ..Default::default()
         })

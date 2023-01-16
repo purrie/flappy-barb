@@ -1,4 +1,4 @@
-use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
+use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*, render::camera::ScalingMode};
 
 const SKY_COLOR: Color = Color::Hsla {
     hue: 200.0,
@@ -42,6 +42,14 @@ fn make_camera(mut cmd: Commands) {
     cmd.spawn(Camera2dBundle {
         camera_2d: Camera2d {
             clear_color: ClearColorConfig::Custom(SKY_COLOR),
+        },
+        projection: OrthographicProjection {
+            top: 1080.0,
+            right: 1920.0,
+            bottom: 0.0,
+            left: 0.0,
+            scaling_mode: ScalingMode::None,
+            ..default()
         },
         ..default()
     });

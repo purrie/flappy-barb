@@ -12,7 +12,6 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         let start = SystemSet::on_enter(GameState::Playing).with_system(make_player_sprite);
         let update = SystemSet::on_update(GameState::Playing)
-            .with_system(player_on_side)
             .with_system(jump_system.after("gravity").before("movement"))
             .with_system(attack_state.before("collision"))
             .with_system(animate_player);
@@ -88,14 +87,27 @@ fn animate_player(mut player: Query<(&mut Sprite, &Player)>) {
     }
 }
 
-fn make_player_sprite(mut commands: Commands, _asset_server: Res<AssetServer>) {
+fn make_player_sprite(
+    mut commands: Commands,
+    _asset_server: Res<AssetServer>,
+    camera: Query<&OrthographicProjection>,
+) {
     // let img = asset_server.load("sprites/testchar2.png");
+    let camera = camera.single();
     commands.spawn((
         SpriteBundle {
             // texture: img,
             sprite: Sprite {
                 custom_size: Some(Vec2 { x: 128., y: 128. }),
                 ..Default::default()
+            },
+            transform: Transform {
+                translation: Vec3 {
+                    x: camera.left + 256.0,
+                    y: (camera.top + camera.bottom) / 2.0,
+                    ..default()
+                },
+                ..default()
             },
             ..default()
         },
@@ -106,15 +118,6 @@ fn make_player_sprite(mut commands: Commands, _asset_server: Res<AssetServer>) {
         Gravity::default(),
         Player::default(),
     ));
-}
-
-fn player_on_side(
-    mut player: Query<&mut Transform, With<Player>>,
-    camera_view: Query<&OrthographicProjection>,
-) {
-    let mut player = player.get_single_mut().unwrap();
-    let cam = camera_view.get_single().unwrap();
-    player.translation.x = cam.left + 256.;
 }
 
 fn player_dead(

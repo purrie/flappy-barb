@@ -72,6 +72,7 @@ struct ObstacleAssets {
     bird_dead: Handle<Image>,
     tree_normal: Handle<Image>,
     tree_dead: Handle<Image>,
+    bird_death_sounds: Vec<Handle<AudioSource>>,
 }
 
 impl ObstacleAssets {
@@ -83,12 +84,18 @@ impl ObstacleAssets {
 }
 
 fn load_birds(mut cmd: Commands, asset_server: Res<AssetServer>) {
+    let mut bird_death_sounds = vec![];
+    for i in 1..=11 {
+        bird_death_sounds.push(asset_server.load(format!("audio/bird-death-{}.ogg", i)));
+    }
+
     let bs = ObstacleAssets {
         bird_fly_1: asset_server.load("sprites/bird-fly-1.png"),
         bird_fly_2: asset_server.load("sprites/bird-fly-2.png"),
         bird_dead: asset_server.load("sprites/bird-dead.png"),
         tree_normal: asset_server.load("sprites/tree-full.png"),
         tree_dead: asset_server.load("sprites/tree-cut.png"),
+        bird_death_sounds,
     };
     cmd.insert_resource(bs);
 }
@@ -246,9 +253,10 @@ fn remove_obstacle(
 fn obstacle_collision(
     mut cmd: Commands,
     mut ev: EventReader<CollisionEvent>,
-    sprites: Res<ObstacleAssets>,
+    assets: Res<ObstacleAssets>,
     mut score: EventWriter<ScoreEvent>,
     mut game_over: EventWriter<GameOverEvent>,
+    audio: Res<Audio>,
 ) {
     ev.iter().for_each(|o| {
         if o.player_state == AttackState::NotAttacking {
@@ -268,13 +276,14 @@ fn obstacle_collision(
 
         match o.obstacle_kind {
             ObstacleKind::Tree => {
-                spawn_tree_corpse(&mut cmd, &sprites, o.obstacle_pos);
+                spawn_tree_corpse(&mut cmd, &assets, o.obstacle_pos);
                 spawn_hit(&mut cmd, Color::GREEN, hit_location, force);
             }
             ObstacleKind::Bird => {
-                spawn_bird_corpse(&mut cmd, &sprites, o.obstacle_pos, force);
+                spawn_bird_corpse(&mut cmd, &assets, o.obstacle_pos, force);
                 spawn_hit(&mut cmd, Color::RED, hit_location, force);
                 score.send(ScoreEvent::Add);
+                play_bird_death_sound(&audio, &assets);
             }
         };
     });
@@ -283,8 +292,9 @@ fn obstacle_collision(
 fn projectiles(
     mut cmd: Commands,
     mut ev: EventReader<ProjectileCollisionEvent>,
-    sprites: Res<ObstacleAssets>,
+    assets: Res<ObstacleAssets>,
     mut score: EventWriter<ScoreEvent>,
+    audio: Res<Audio>,
 ) {
     ev.iter().for_each(|e| {
         if e.hit_pos.distance(e.projectile_pos) > 100.0 {
@@ -301,16 +311,26 @@ fn projectiles(
 
         match e.hit_kind {
             ObstacleKind::Tree => {
-                spawn_tree_corpse(&mut cmd, &sprites, e.hit_pos);
+                spawn_tree_corpse(&mut cmd, &assets, e.hit_pos);
                 spawn_hit(&mut cmd, Color::GREEN, hit_location, force);
             }
             ObstacleKind::Bird => {
-                spawn_bird_corpse(&mut cmd, &sprites, e.hit_pos, force);
+                spawn_bird_corpse(&mut cmd, &assets, e.hit_pos, force);
                 spawn_hit(&mut cmd, Color::RED, hit_location, force);
                 score.send(ScoreEvent::Add);
+                play_bird_death_sound(&audio, &assets);
             }
         }
     });
+}
+
+fn play_bird_death_sound(audio: &Res<Audio>, assets: &Res<ObstacleAssets>) {
+    let sound = assets
+        .bird_death_sounds
+        .get(rand::random::<usize>() % assets.bird_death_sounds.len())
+        .unwrap()
+        .clone();
+    audio.play(sound);
 }
 
 fn spawn_hit(cmd: &mut Commands, color: Color, location: Vec3, force: Vec2) {

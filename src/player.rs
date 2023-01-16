@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
-    game::GameState,
+    game::{GameOverEvent, GameState},
     physics::{Gravity, Movement},
 };
 
@@ -14,6 +14,7 @@ impl Plugin for PlayerPlugin {
         let update = SystemSet::on_update(GameState::Playing)
             .with_system(jump_system.after("gravity").before("movement"))
             .with_system(attack_state.before("collision"))
+            .with_system(player_out_of_bounds.after("movement"))
             .with_system(animate_player);
         let end = SystemSet::on_exit(GameState::Playing).with_system(player_dead);
 
@@ -135,4 +136,20 @@ fn clean_player(mut cmd: Commands, player: Query<Entity, With<PlayerCorpse>>) {
     player.for_each(|x| {
         cmd.entity(x).insert(Dead::default());
     })
+}
+
+fn player_out_of_bounds(
+    mut event: EventWriter<GameOverEvent>,
+    player: Query<(&Transform, &Sprite), With<Player>>,
+    camera: Query<&OrthographicProjection>,
+) {
+    let player = player.single();
+    let camera = camera.single();
+    let pos = player.0.translation.y;
+    let size = player.1.custom_size.unwrap().y / 2.0;
+    let bottom = pos - size;
+    let top = pos + size;
+    if bottom < camera.bottom || top > camera.top {
+        event.send_default();
+    }
 }

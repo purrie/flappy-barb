@@ -73,6 +73,7 @@ struct ObstacleAssets {
     tree_normal: Handle<Image>,
     tree_dead: Handle<Image>,
     bird_death_sounds: Vec<Handle<AudioSource>>,
+    tree_death_sounds: Vec<Handle<AudioSource>>,
 }
 
 impl ObstacleAssets {
@@ -88,6 +89,10 @@ fn load_birds(mut cmd: Commands, asset_server: Res<AssetServer>) {
     for i in 1..=11 {
         bird_death_sounds.push(asset_server.load(format!("audio/bird-death-{}.ogg", i)));
     }
+    let mut tree_death_sounds = vec![];
+    for i in 1..=2 {
+        tree_death_sounds.push(asset_server.load(format!("audio/tree-death-{}.ogg", i)));
+    }
 
     let bs = ObstacleAssets {
         bird_fly_1: asset_server.load("sprites/bird-fly-1.png"),
@@ -96,6 +101,7 @@ fn load_birds(mut cmd: Commands, asset_server: Res<AssetServer>) {
         tree_normal: asset_server.load("sprites/tree-full.png"),
         tree_dead: asset_server.load("sprites/tree-cut.png"),
         bird_death_sounds,
+        tree_death_sounds,
     };
     cmd.insert_resource(bs);
 }
@@ -278,6 +284,7 @@ fn obstacle_collision(
             ObstacleKind::Tree => {
                 spawn_tree_corpse(&mut cmd, &assets, o.obstacle_pos);
                 spawn_hit(&mut cmd, Color::GREEN, hit_location, force);
+                play_tree_death_sound(&audio, &assets);
             }
             ObstacleKind::Bird => {
                 spawn_bird_corpse(&mut cmd, &assets, o.obstacle_pos, force);
@@ -313,6 +320,7 @@ fn projectiles(
             ObstacleKind::Tree => {
                 spawn_tree_corpse(&mut cmd, &assets, e.hit_pos);
                 spawn_hit(&mut cmd, Color::GREEN, hit_location, force);
+                play_tree_death_sound(&audio, &assets);
             }
             ObstacleKind::Bird => {
                 spawn_bird_corpse(&mut cmd, &assets, e.hit_pos, force);
@@ -328,6 +336,15 @@ fn play_bird_death_sound(audio: &Res<Audio>, assets: &Res<ObstacleAssets>) {
     let sound = assets
         .bird_death_sounds
         .get(rand::random::<usize>() % assets.bird_death_sounds.len())
+        .unwrap()
+        .clone();
+    audio.play(sound);
+}
+
+fn play_tree_death_sound(audio: &Res<Audio>, assets: &Res<ObstacleAssets>) {
+    let sound = assets
+        .tree_death_sounds
+        .get(rand::random::<usize>() % assets.tree_death_sounds.len())
         .unwrap()
         .clone();
     audio.play(sound);

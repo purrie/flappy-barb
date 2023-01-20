@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
-    game::{GameOverEvent, GameState},
+    game::{GameOverEvent, GameState, FadeOut},
     particles::{EmissionDirection, ParticleEmitter},
     physics::{
         Collider, CollisionEvent, FaceMovementDirection, Gravity, Movement, Projectile,
@@ -445,7 +445,14 @@ fn play_tree_death_sound(audio: &Res<Audio>, assets: &Res<ObstacleAssets>) {
         .get(rand::random::<usize>() % assets.tree_death_sounds.len())
         .unwrap()
         .clone();
-    audio.play(sound);
+    audio.play_with_settings(
+        sound,
+        PlaybackSettings {
+            repeat: false,
+            volume: 0.3,
+            speed: 1.0,
+        },
+    );
 }
 
 fn spawn_hit(cmd: &mut Commands, color: Color, location: Vec3, force: Vec2) {
@@ -530,8 +537,8 @@ fn spawn_cloud_corpse(
 ) {
     for i in 0..2 {
         let movement = Vec2 {
-            x: if i == 0 { -movement.x } else { movement.x } * 0.5,
-            y: movement.y * 0.5,
+            x: if i == 0 { -movement.x.abs() } else { movement.x.abs() } * 0.5,
+            y: movement.y * 0.1,
         };
         let i = i as f32;
         let location = Vec3 {
@@ -574,10 +581,11 @@ fn spawn_cloud_corpse(
                 x: movement.x,
                 y: movement.y,
             },
+            FadeOut { speed: 1.0 },
             ParticleEmitter::new(1, Duration::new(0, 50000), TimerMode::Repeating)
                 .with_color(Color::WHITE)
                 .with_direction(EmissionDirection::Global(movement * -1.0)),
-            Dead { timer: 3.0 },
+            Dead { timer: 1.0 },
         ));
     }
 }

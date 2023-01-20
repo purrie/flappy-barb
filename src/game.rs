@@ -22,6 +22,7 @@ impl Plugin for GamePlugin {
         app.add_state(GameState::MainMenu)
             .add_event::<GameOverEvent>()
             .add_startup_system(make_camera)
+            .add_system(fade_out)
             .add_system_set(menu_update)
             .add_system_set(play_update)
             .add_system_set(end_update);
@@ -36,6 +37,11 @@ pub enum GameState {
     Playing,
     End,
     MainMenu,
+}
+
+#[derive(Component)]
+pub struct FadeOut {
+    pub speed: f32,
 }
 
 fn make_camera(mut cmd: Commands) {
@@ -70,4 +76,11 @@ fn start_game_shortcut(input: Res<Input<KeyCode>>, mut state: ResMut<State<GameS
             println!("Error: {e}");
         }
     }
+}
+
+fn fade_out(mut fade: Query<(&mut Sprite, &FadeOut)>, time: Res<Time>) {
+    fade.for_each_mut(|(mut sprite, fade)| {
+        let a = sprite.color.a();
+        sprite.color.set_a(a - fade.speed * time.delta_seconds());
+    })
 }

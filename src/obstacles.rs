@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
-    game::{GameOverEvent, GameState, FadeOut},
+    game::{FadeOut, GameOverEvent, GameState},
     particles::{EmissionDirection, ParticleEmitter},
     physics::{
         Collider, CollisionEvent, FaceMovementDirection, Gravity, Movement, Projectile,
@@ -90,6 +90,8 @@ struct ObstacleAssets {
     cloud_dead: Handle<Image>,
     bird_death_sounds: Vec<Handle<AudioSource>>,
     tree_death_sounds: Vec<Handle<AudioSource>>,
+    cloud_death_sounds: Vec<Handle<AudioSource>>,
+    cloud_hit_sounds: Vec<Handle<AudioSource>>,
 }
 
 impl ObstacleAssets {
@@ -112,6 +114,14 @@ fn load_birds(mut cmd: Commands, asset_server: Res<AssetServer>) {
     for i in 1..=2 {
         tree_death_sounds.push(asset_server.load(format!("audio/tree-death-{}.ogg", i)));
     }
+    let mut cloud_death_sounds = vec![];
+    for i in 1..=2 {
+        cloud_death_sounds.push(asset_server.load(format!("audio/cloud-death-{}.ogg", i)));
+    }
+    let mut cloud_hit_sounds = vec![];
+    for i in 1..=2 {
+        cloud_hit_sounds.push(asset_server.load(format!("audio/cloud-hit-{}.ogg", i)));
+    }
 
     let bs = ObstacleAssets {
         bird_fly_1: asset_server.load("sprites/bird-fly-1.png"),
@@ -123,6 +133,8 @@ fn load_birds(mut cmd: Commands, asset_server: Res<AssetServer>) {
         cloud_dead: asset_server.load("sprites/cloud-cut.png"),
         bird_death_sounds,
         tree_death_sounds,
+        cloud_death_sounds,
+        cloud_hit_sounds,
     };
     cmd.insert_resource(bs);
 }
@@ -408,7 +420,7 @@ fn obstacle_collision_handle(
                 .insert(Dead::default());
             spawn_tree_corpse(cmd, &assets, obstacle_pos);
             spawn_hit(cmd, Color::GREEN, hit_location, force);
-            play_tree_death_sound(&audio, &assets);
+            play_death_sound(&audio, &assets, ObstacleKind::Tree);
         }
         ObstacleKind::Bird => {
             cmd.entity(obstacle)
@@ -417,7 +429,7 @@ fn obstacle_collision_handle(
             spawn_bird_corpse(cmd, &assets, obstacle_pos, force);
             spawn_hit(cmd, Color::RED, hit_location, force);
             score.send(ScoreEvent::Add);
-            play_bird_death_sound(&audio, &assets);
+            play_death_sound(&audio, &assets, ObstacleKind::Bird);
         }
         ObstacleKind::Cloud if is_player_collision => {
             cmd.entity(obstacle)
@@ -425,34 +437,63 @@ fn obstacle_collision_handle(
                 .insert(Dead::default());
             spawn_cloud_corpse(cmd, &assets, obstacle_pos, force);
             spawn_hit(cmd, Color::WHITE, hit_location, force);
+            play_death_sound(&audio, &assets, ObstacleKind::Cloud);
+            play_hit_sound(&audio, &assets, ObstacleKind::Cloud);
         }
         ObstacleKind::Cloud => {}
     }
 }
 
-fn play_bird_death_sound(audio: &Res<Audio>, assets: &Res<ObstacleAssets>) {
-    let sound = assets
-        .bird_death_sounds
-        .get(rand::random::<usize>() % assets.bird_death_sounds.len())
-        .unwrap()
-        .clone();
-    audio.play(sound);
+fn play_death_sound(audio: &Res<Audio>, assets: &Res<ObstacleAssets>, obstacle: ObstacleKind) {
+    let sound = match obstacle {
+        ObstacleKind::Tree => (
+            assets
+                .tree_death_sounds
+                .get(rand::random::<usize>() % assets.tree_death_sounds.len())
+                .unwrap()
+                .clone(),
+            PlaybackSettings {
+                volume: 0.3,
+                ..default()
+            },
+        ),
+        ObstacleKind::Bird => (
+            assets
+                .bird_death_sounds
+                .get(rand::random::<usize>() % assets.bird_death_sounds.len())
+                .unwrap()
+                .clone(),
+            PlaybackSettings::default(),
+        ),
+        ObstacleKind::Cloud => (
+            assets
+                .cloud_death_sounds
+                .get(rand::random::<usize>() % assets.tree_death_sounds.len())
+                .unwrap()
+                .clone(),
+            PlaybackSettings {
+                volume: 0.5,
+                ..default()
+            },
+        ),
+    };
+    audio.play_with_settings(sound.0, sound.1);
 }
 
-fn play_tree_death_sound(audio: &Res<Audio>, assets: &Res<ObstacleAssets>) {
-    let sound = assets
-        .tree_death_sounds
-        .get(rand::random::<usize>() % assets.tree_death_sounds.len())
-        .unwrap()
-        .clone();
-    audio.play_with_settings(
-        sound,
-        PlaybackSettings {
-            repeat: false,
-            volume: 0.3,
-            speed: 1.0,
-        },
-    );
+fn play_hit_sound(audio: &Res<Audio>, assets: &Res<ObstacleAssets>, obstacle: ObstacleKind) {
+    let sound = match obstacle {
+        ObstacleKind::Tree => todo!(),
+        ObstacleKind::Bird => todo!(),
+        ObstacleKind::Cloud => (
+            assets
+                .cloud_hit_sounds
+                .get(rand::random::<usize>() % assets.cloud_hit_sounds.len())
+                .unwrap()
+                .clone(),
+            PlaybackSettings::default(),
+        ),
+    };
+    audio.play_with_settings(sound.0, sound.1);
 }
 
 fn spawn_hit(cmd: &mut Commands, color: Color, location: Vec3, force: Vec2) {
@@ -537,7 +578,11 @@ fn spawn_cloud_corpse(
 ) {
     for i in 0..2 {
         let movement = Vec2 {
-            x: if i == 0 { -movement.x.abs() } else { movement.x.abs() } * 0.5,
+            x: if i == 0 {
+                -movement.x.abs()
+            } else {
+                movement.x.abs()
+            } * 0.5,
             y: movement.y * 0.1,
         };
         let i = i as f32;

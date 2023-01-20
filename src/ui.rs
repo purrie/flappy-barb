@@ -19,6 +19,7 @@ impl Plugin for GameUiPlugin {
         let exit_end = SystemSet::on_exit(GameState::End).with_system(clean_ui);
 
         app.add_event::<ScoreEvent>()
+            .insert_resource(Score::default())
             .add_startup_system(load_font)
             .add_system_set(start_menu)
             .add_system_set(update_menu)
@@ -32,6 +33,7 @@ impl Plugin for GameUiPlugin {
     }
 }
 
+#[derive(PartialEq)]
 pub enum ScoreEvent {
     Add,
     ResetCombo,

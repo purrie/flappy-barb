@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
-    game::{FadeOut, GameOverEvent, GameState},
+    game::{FadeOut, GameOverEvent, GameState, VIEW_BOX},
     particles::{EmissionDirection, ParticleEmitter},
     physics::{
         Collider, CollisionEvent, FaceMovementDirection, Gravity, Movement, Projectile,
@@ -161,16 +161,14 @@ fn spawn_birds(
     sprites: Res<ObstacleAssets>,
     mut timer: ResMut<BirdSpawnTimer>,
     time: Res<Time>,
-    camera: Query<&OrthographicProjection>,
 ) {
     if timer.tick(time.delta()).just_finished() {
         let duration = Duration::new(1, rand::random::<u32>() % 1000000000);
         timer.set_duration(duration);
         timer.reset();
-        let op = camera.get_single().unwrap();
         let rand_height: f32 = rand::random::<f32>();
         let height = (rand_height * 0.6) + 0.2;
-        let height = op.top * (1. - height) + op.bottom * height;
+        let height = VIEW_BOX.max.y * (1. - height) + VIEW_BOX.min.y * height;
         let img = sprites.bird_fly_1.clone();
         let random_speed = rand::random::<i32>() % 200 - 100;
         let sprite = (
@@ -185,7 +183,7 @@ fn spawn_birds(
                 },
                 transform: Transform {
                     translation: Vec3 {
-                        x: op.right + 64.,
+                        x: VIEW_BOX.max.x + ObstacleAssets::BIRD_SPRITE_SIZE_X,
                         y: height,
                         z: 0.,
                     },
@@ -234,14 +232,12 @@ fn spawn_tree_obstacles(
     sprites: Res<ObstacleAssets>,
     mut timer: ResMut<TreeSpawnTimer>,
     time: Res<Time>,
-    camera: Query<&OrthographicProjection>,
 ) {
     if timer.tick(time.delta()).just_finished() {
         let duration = Duration::new(1, rand::random::<u32>());
         timer.set_duration(duration);
         timer.reset();
-        let op = camera.get_single().unwrap();
-        let height = op.bottom + ObstacleAssets::TREE_SPRITE_SIZE_Y / 2.;
+        let height = VIEW_BOX.min.y + ObstacleAssets::TREE_SPRITE_SIZE_Y / 2.;
 
         let img = sprites.tree_normal.clone();
         let sprite = (
@@ -256,7 +252,7 @@ fn spawn_tree_obstacles(
                 },
                 transform: Transform {
                     translation: Vec3 {
-                        x: op.right + 64.,
+                        x: VIEW_BOX.max.x + ObstacleAssets::TREE_SPRITE_SIZE_X,
                         y: height,
                         z: 0.,
                     },
@@ -279,7 +275,6 @@ fn spawn_tree_obstacles(
 fn spawn_cloud_obstacles(
     mut cmd: Commands,
     assets: Res<ObstacleAssets>,
-    camera: Query<&OrthographicProjection>,
     time: Res<Time>,
     mut timer: ResMut<CloudSpawnTimer>,
 ) {
@@ -287,7 +282,6 @@ fn spawn_cloud_obstacles(
         let duration = Duration::new(3, rand::random::<u32>());
         timer.set_duration(duration);
         timer.reset();
-        let camera = camera.single();
         let img = assets.cloud_normal.clone();
         let cloud = (
             SpriteBundle {
@@ -301,8 +295,8 @@ fn spawn_cloud_obstacles(
                 },
                 transform: Transform {
                     translation: Vec3 {
-                        x: camera.right + ObstacleAssets::CLOUD_SPRITE_SIZE_X,
-                        y: camera.top
+                        x: VIEW_BOX.max.x + ObstacleAssets::CLOUD_SPRITE_SIZE_X,
+                        y: VIEW_BOX.max.y
                             - ObstacleAssets::CLOUD_SPRITE_SIZE_Y
                                 * (rand::random::<f32>() * 0.3 + 0.5),
                         ..default()
@@ -325,14 +319,15 @@ fn spawn_cloud_obstacles(
 
 fn remove_obstacle(
     mut cmd: Commands,
-    camera_view: Query<&OrthographicProjection>,
     obstacles: Query<(Entity, &Transform, &Obstacle)>,
     mut ev: EventWriter<ScoreEvent>,
 ) {
-    let op = camera_view.get_single().unwrap();
     obstacles
         .iter()
-        .filter(|x| x.1.translation.x < (op.left - 128.) || x.1.translation.y < (op.bottom - 128.))
+        .filter(|x| {
+            x.1.translation.x < (VIEW_BOX.min.x - 128.)
+                || x.1.translation.y < (VIEW_BOX.min.y - 128.)
+        })
         .for_each(|x| {
             cmd.entity(x.0)
                 .remove::<Obstacle>()

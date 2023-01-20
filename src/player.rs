@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
-    game::{GameOverEvent, GameState},
+    game::{GameOverEvent, GameState, VIEW_BOX},
     physics::{Gravity, Movement},
 };
 
@@ -88,13 +88,7 @@ fn animate_player(mut player: Query<(&mut Sprite, &Player)>) {
     }
 }
 
-fn make_player_sprite(
-    mut commands: Commands,
-    _asset_server: Res<AssetServer>,
-    camera: Query<&OrthographicProjection>,
-) {
-    // let img = asset_server.load("sprites/testchar2.png");
-    let camera = camera.single();
+fn make_player_sprite(mut commands: Commands, _asset_server: Res<AssetServer>) {
     commands.spawn((
         SpriteBundle {
             // texture: img,
@@ -104,8 +98,8 @@ fn make_player_sprite(
             },
             transform: Transform {
                 translation: Vec3 {
-                    x: camera.left + 256.0,
-                    y: (camera.top + camera.bottom) / 2.0,
+                    x: VIEW_BOX.min.x + 256.0,
+                    y: VIEW_BOX.min.y + VIEW_BOX.height() / 2.0,
                     ..default()
                 },
                 ..default()
@@ -141,15 +135,13 @@ fn clean_player(mut cmd: Commands, player: Query<Entity, With<PlayerCorpse>>) {
 fn player_out_of_bounds(
     mut event: EventWriter<GameOverEvent>,
     player: Query<(&Transform, &Sprite), With<Player>>,
-    camera: Query<&OrthographicProjection>,
 ) {
     let player = player.single();
-    let camera = camera.single();
     let pos = player.0.translation.y;
     let size = player.1.custom_size.unwrap().y / 2.0;
     let bottom = pos - size;
     let top = pos + size;
-    if bottom < camera.bottom || top > camera.top {
+    if bottom < VIEW_BOX.min.y || top > VIEW_BOX.max.y {
         event.send_default();
     }
 }

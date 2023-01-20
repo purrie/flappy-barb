@@ -1,4 +1,7 @@
-use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*, render::camera::ScalingMode};
+use bevy::{
+    core_pipeline::clear_color::ClearColorConfig, prelude::*, render::camera::ScalingMode,
+    sprite::Anchor,
+};
 
 const SKY_COLOR: Color = Color::Hsla {
     hue: 200.0,
@@ -22,7 +25,9 @@ impl Plugin for GamePlugin {
         app.add_state(GameState::MainMenu)
             .add_event::<GameOverEvent>()
             .add_startup_system(make_camera)
+            .add_startup_system(make_background)
             .add_system(fade_out)
+            .add_system(side_scroll)
             .add_system_set(menu_update)
             .add_system_set(play_update)
             .add_system_set(end_update);
@@ -44,6 +49,11 @@ pub struct FadeOut {
     pub speed: f32,
 }
 
+#[derive(Component)]
+struct Scroll {
+    speed: f32,
+}
+
 fn make_camera(mut cmd: Commands) {
     cmd.spawn(Camera2dBundle {
         camera_2d: Camera2d {
@@ -57,8 +67,105 @@ fn make_camera(mut cmd: Commands) {
             scaling_mode: ScalingMode::None,
             ..default()
         },
+        transform: Transform::from_translation(Vec3 {
+            z: 5.0,
+            ..default()
+        }),
         ..default()
     });
+}
+
+fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
+    let bg1 = asset_server.load("sprites/grass.png");
+    let bg2 = asset_server.load("sprites/hills.png");
+    let size = Vec2 {
+        x: 1980.0,
+        y: 300.0,
+    };
+    let size2 = Vec2 {
+        x: 1980.0,
+        y: 150.0,
+    };
+
+    cmd.spawn((
+        SpriteBundle {
+            texture: bg1.clone(),
+            sprite: Sprite {
+                custom_size: Some(size),
+                anchor: Anchor::BottomRight,
+                ..default()
+            },
+            transform: Transform::from_translation(Vec3 {
+                x: 1980.0,
+                z: -1.0,
+                ..default()
+            }),
+            ..default()
+        },
+        Scroll { speed: 300.0 },
+    ));
+    cmd.spawn((
+        SpriteBundle {
+            texture: bg1,
+            sprite: Sprite {
+                custom_size: Some(size),
+                anchor: Anchor::BottomRight,
+                ..default()
+            },
+            transform: Transform::from_translation(Vec3 {
+                x: 3960.0,
+                z: -1.0,
+                ..default()
+            }),
+            ..default()
+        },
+        Scroll { speed: 300.0 },
+    ));
+    cmd.spawn((
+        SpriteBundle {
+            texture: bg2.clone(),
+            sprite: Sprite {
+                custom_size: Some(size2),
+                anchor: Anchor::BottomRight,
+                ..default()
+            },
+            transform: Transform::from_translation(Vec3 {
+                x: 1980.0,
+                y: 100.0,
+                z: -2.0,
+            }),
+            ..default()
+        },
+        Scroll { speed: 200.0 },
+    ));
+    cmd.spawn((
+        SpriteBundle {
+            texture: bg2,
+            sprite: Sprite {
+                custom_size: Some(size2),
+                anchor: Anchor::BottomRight,
+                ..default()
+            },
+            transform: Transform::from_translation(Vec3 {
+                x: 3960.0,
+                y: 100.0,
+                z: -2.0,
+            }),
+            ..default()
+        },
+        Scroll { speed: 200.0 },
+    ));
+}
+
+fn side_scroll(mut background: Query<(&mut Transform, &Scroll)>, time: Res<Time>) {
+    background.for_each_mut(|(mut tr, scr)| {
+        let scroll = scr.speed * time.delta_seconds();
+        let mut newx = tr.translation.x - scroll;
+        if newx < 0.0 {
+            newx += 3960.0;
+        }
+        tr.translation.x = newx;
+    })
 }
 
 fn game_over(go: EventReader<GameOverEvent>, mut end: ResMut<State<GameState>>) {

@@ -132,7 +132,7 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
     };
     let size2 = Vec2 {
         x: VIEW_BOX.width(),
-        y: 150.0,
+        y: 300.0,
     };
 
     cmd.spawn((
@@ -179,7 +179,7 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
             },
             transform: Transform::from_translation(Vec3 {
                 x: VIEW_BOX.max.x,
-                y: VIEW_BOX.min.y + 100.0,
+                y: VIEW_BOX.min.y,
                 z: -2.0,
             }),
             ..default()
@@ -196,7 +196,7 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
             },
             transform: Transform::from_translation(Vec3 {
                 x: VIEW_BOX.max.x + size2.x,
-                y: VIEW_BOX.min.y + 100.0,
+                y: VIEW_BOX.min.y,
                 z: -2.0,
             }),
             ..default()

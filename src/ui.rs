@@ -54,6 +54,7 @@ pub struct ScoreBoard;
 pub struct Score {
     pub score: i32,
     pub current_combo: i32,
+    pub max_combo: i32,
 }
 
 impl Score {
@@ -61,6 +62,9 @@ impl Score {
         let combo_bonus = self.current_combo / 10;
         self.score += 1 + combo_bonus;
         self.current_combo += 1;
+        if self.current_combo > self.max_combo {
+            self.max_combo = self.current_combo;
+        }
     }
     pub fn reset_combo(&mut self) {
         self.current_combo = 0;
@@ -206,7 +210,42 @@ fn spawn_end_score(mut cmd: Commands, ui: Res<UiAssets>, score: Res<Score>) {
         );
         parent.spawn(
             TextBundle::from_section(
-                score.score.to_string(),
+                format! {"{}", score.score},
+                TextStyle {
+                    font: ui.font.clone(),
+                    color: Color::BLACK,
+                    font_size: 40.0,
+                },
+            )
+            .with_style(Style {
+                align_self: AlignSelf::Center,
+                ..default()
+            }),
+        );
+        parent.spawn(NodeBundle {
+            style: Style {
+                flex_grow: 20.0,
+                ..default()
+            },
+            ..default()
+        });
+        parent.spawn(
+            TextBundle::from_section(
+                "Top Combo",
+                TextStyle {
+                    font: ui.font.clone(),
+                    color: Color::BLACK,
+                    font_size: 40.0,
+                },
+            )
+            .with_style(Style {
+                align_self: AlignSelf::Center,
+                ..default()
+            }),
+        );
+        parent.spawn(
+            TextBundle::from_section(
+                format!("{}", score.max_combo),
                 TextStyle {
                     font: ui.font.clone(),
                     color: Color::BLACK,

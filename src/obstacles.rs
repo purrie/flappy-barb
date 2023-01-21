@@ -20,24 +20,25 @@ impl Plugin for ObstaclesPlugin {
     fn build(&self, app: &mut App) {
         let start = SystemSet::on_enter(GameState::Playing).with_system(setup_obstacle_spawn_timer);
         let update = SystemSet::on_update(GameState::Playing)
-            .with_system(spawn_birds)
-            .with_system(bird_animation.before("cleanup"))
-            .with_system(spawn_tree_obstacles)
-            .with_system(spawn_cloud_obstacles)
-            .with_system(remove_obstacle.before("cleanup"))
-            .with_system(projectiles.after("projectiles"))
-            .with_system(
-                obstacle_player_collision
-                    .before("game_over")
-                    .after("collision"),
-            );
+            .with_system(spawn_birds);
 
         let cleanup = SystemSet::on_exit(GameState::End).with_system(cleanup_obstacles);
 
         app.add_startup_system(load_birds)
+            .add_startup_system(setup_obstacle_spawn_timer)
             .add_system_set(start)
             .add_system_set(update)
-            .add_system_set(cleanup);
+            .add_system_set(cleanup)
+            .add_system(bird_animation.before("cleanup"))
+            .add_system(spawn_tree_obstacles)
+            .add_system(spawn_cloud_obstacles)
+            .add_system(remove_obstacle.before("cleanup"))
+            .add_system(projectiles.after("projectiles"))
+            .add_system(
+                obstacle_player_collision
+                    .before("game_over")
+                    .after("collision"),
+            );
     }
 }
 

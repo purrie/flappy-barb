@@ -11,7 +11,7 @@ use crate::{
         ProjectileCollisionEvent,
     },
     player::AttackState,
-    ui::ScoreEvent,
+    ui::{Score, ScoreEvent},
 };
 
 pub struct ObstaclesPlugin;
@@ -19,8 +19,7 @@ pub struct ObstaclesPlugin;
 impl Plugin for ObstaclesPlugin {
     fn build(&self, app: &mut App) {
         let start = SystemSet::on_enter(GameState::Playing).with_system(setup_obstacle_spawn_timer);
-        let update = SystemSet::on_update(GameState::Playing)
-            .with_system(spawn_birds);
+        let update = SystemSet::on_update(GameState::Playing).with_system(spawn_birds);
 
         let cleanup = SystemSet::on_exit(GameState::End).with_system(cleanup_obstacles);
 
@@ -162,16 +161,18 @@ fn spawn_birds(
     sprites: Res<ObstacleAssets>,
     mut timer: ResMut<BirdSpawnTimer>,
     time: Res<Time>,
+    score: Res<Score>,
 ) {
     if timer.tick(time.delta()).just_finished() {
-        let duration = Duration::new(1, rand::random::<u32>() % 1000000000);
+        let variable_time = 1000000000 - score.score.min(1000) as u32 * 1000000;
+        let duration = Duration::new(0, rand::random::<u32>() % (1000000000) + variable_time);
         timer.set_duration(duration);
         timer.reset();
         let rand_height: f32 = rand::random::<f32>();
         let height = (rand_height * 0.6) + 0.2;
         let height = VIEW_BOX.max.y * (1. - height) + VIEW_BOX.min.y * height;
         let img = sprites.bird_fly_1.clone();
-        let random_speed = rand::random::<i32>() % 200 - 100;
+        let random_speed = rand::random::<i32>() % 200;
         let sprite = (
             SpriteBundle {
                 texture: img,
@@ -199,7 +200,7 @@ fn spawn_birds(
             Bird,
             Collider,
             Movement {
-                x: -500.0 + random_speed as f32,
+                x: -400.0 - random_speed as f32 - score.current_combo.min(100) as f32 * 2.0,
                 y: 0.,
             },
         );
@@ -267,7 +268,7 @@ fn spawn_tree_obstacles(
             },
             Tree,
             Collider,
-            Movement { x: -300., y: 0. },
+            Movement { x: -200., y: 0. },
         );
         cmd.spawn(sprite);
     }
@@ -312,7 +313,7 @@ fn spawn_cloud_obstacles(
             },
             Cloud,
             Collider,
-            Movement { x: -200.0, y: 0.0 },
+            Movement { x: -100.0, y: 0.0 },
         );
         cmd.spawn(cloud);
     }
@@ -631,7 +632,7 @@ fn spawn_cloud_corpse(
     }
 }
 
-fn cleanup_obstacles(mut cmd: Commands, obs: Query<Entity, With<Obstacle>>) {
+fn cleanup_obstacles(mut cmd: Commands, obs: Query<Entity, With<Bird>>) {
     obs.for_each(|x| {
         cmd.entity(x).insert(Dead::default());
     });

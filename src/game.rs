@@ -150,7 +150,7 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
             }),
             ..default()
         },
-        Scroll { speed: 300.0 },
+        Scroll { speed: 200.0 },
     ));
     cmd.spawn((
         SpriteBundle {
@@ -167,7 +167,7 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
             }),
             ..default()
         },
-        Scroll { speed: 300.0 },
+        Scroll { speed: 200.0 },
     ));
     cmd.spawn((
         SpriteBundle {
@@ -184,7 +184,7 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
             }),
             ..default()
         },
-        Scroll { speed: 200.0 },
+        Scroll { speed: 100.0 },
     ));
     cmd.spawn((
         SpriteBundle {
@@ -201,7 +201,7 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
             }),
             ..default()
         },
-        Scroll { speed: 200.0 },
+        Scroll { speed: 100.0 },
     ));
 }
 

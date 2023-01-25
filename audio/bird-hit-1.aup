@@ -1,0 +1,74 @@
+<?xml version="1.0" standalone="no" ?>
+<!DOCTYPE project PUBLIC "-//audacityproject-1.3.0//DTD//EN" "http://audacity.sourceforge.net/xml/audacityproject-1.3.0.dtd" >
+<project xmlns="http://audacity.sourceforge.net/xml/" projname="bird-hit-1_data" version="1.3.0" audacityversion="2.4.2" sel0="0.0000000000" sel1="0.0000000000" vpos="0" h="0.0000000000" zoom="1378.1250000000" rate="44100.0" snapto="off" selectionformat="hh:mm:ss + milliseconds" frequencyformat="Hz" bandwidthformat="octaves">
+	<tags/>
+	<wavetrack name="meat-beating-kitchen-food-making" isSelected="0" height="150" minimized="0" channel="2" linked="0" mute="0" solo="0" rate="48000" gain="1.0" pan="0.0" colorindex="0">
+		<waveclip offset="0.00000000" colorindex="0">
+			<sequence maxsamples="262144" sampleformat="262159" numsamples="21455">
+				<waveblock start="0">
+					<simpleblockfile filename="eff1f5c3.au" len="21455" min="-0.282851" max="0.295734" rms="0.0212"/>
+				</waveblock>
+			</sequence>
+			<envelope numpoints="2">
+				<controlpoint t="0.028299319728" val="1.077464818954"/>
+				<controlpoint t="0.223492063492" val="0.746478915215"/>
+			</envelope>
+		</waveclip>
+	</wavetrack>
+	<wavetrack name="meat-beating-kitchen-food-making" isSelected="0" height="150" minimized="0" channel="2" linked="0" mute="0" solo="0" rate="48000" gain="1.0" pan="0.0" colorindex="0">
+		<waveclip offset="0.00000000" colorindex="0">
+			<sequence maxsamples="262144" sampleformat="262159" numsamples="13131">
+				<waveblock start="0">
+					<simpleblockfile filename="eff1f519.au" len="13131" min="-0.261515" max="0.316228" rms="0.048894"/>
+				</waveblock>
+			</sequence>
+			<envelope numpoints="0"/>
+		</waveclip>
+	</wavetrack>
+	<wavetrack name="meat-beating-kitchen-food-making" isSelected="0" height="150" minimized="0" channel="2" linked="0" mute="0" solo="0" rate="48000" gain="1.0" pan="0.0" colorindex="0">
+		<waveclip offset="0.00000000" colorindex="0">
+			<sequence maxsamples="262144" sampleformat="262159" numsamples="19679">
+				<waveblock start="0">
+					<simpleblockfile filename="eff1f7a8.au" len="19679" min="-0.314857" max="0.272312" rms="0.024907"/>
+				</waveblock>
+			</sequence>
+			<envelope numpoints="2">
+				<controlpoint t="0.022494331066" val="1.000000000000"/>
+				<controlpoint t="0.156734693878" val="0.281690120697"/>
+			</envelope>
+		</waveclip>
+	</wavetrack>
+	<wavetrack name="meat-beating-kitchen-food-making" isSelected="0" height="150" minimized="0" channel="2" linked="0" mute="0" solo="0" rate="48000" gain="1.0" pan="0.0" colorindex="0">
+		<waveclip offset="0.00000000" colorindex="0">
+			<sequence maxsamples="262144" sampleformat="262159" numsamples="8290">
+				<waveblock start="0">
+					<simpleblockfile filename="eff1f02c.au" len="8290" min="-0.23428" max="0.316228" rms="0.039279"/>
+				</waveblock>
+			</sequence>
+			<envelope numpoints="0"/>
+		</waveclip>
+	</wavetrack>
+	<wavetrack name="meat-beating-kitchen-food-making" isSelected="0" height="150" minimized="0" channel="2" linked="0" mute="0" solo="0" rate="48000" gain="1.0" pan="0.0" colorindex="0">
+		<waveclip offset="0.00000000" colorindex="0">
+			<sequence maxsamples="262144" sampleformat="262159" numsamples="6859">
+				<waveblock start="0">
+					<simpleblockfile filename="eff1fce9.au" len="6859" min="-0.276668" max="0.316228" rms="0.042679"/>
+				</waveblock>
+			</sequence>
+			<envelope numpoints="2">
+				<controlpoint t="0.034829931973" val="1.000000000000"/>
+				<controlpoint t="0.122630385488" val="0.647887349129"/>
+			</envelope>
+		</waveclip>
+	</wavetrack>
+	<wavetrack name="meat-beating-kitchen-food-making" isSelected="1" height="150" minimized="0" channel="2" linked="0" mute="0" solo="0" rate="48000" gain="1.0" pan="0.0" colorindex="0">
+		<waveclip offset="0.00000000" colorindex="0">
+			<sequence maxsamples="262144" sampleformat="262159" numsamples="13305">
+				<waveblock start="0">
+					<simpleblockfile filename="eff1f7b9.au" len="13305" min="-0.316228" max="0.237361" rms="0.016662"/>
+				</waveblock>
+			</sequence>
+			<envelope numpoints="0"/>
+		</waveclip>
+	</wavetrack>
+</project>

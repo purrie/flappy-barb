@@ -1,8 +1,11 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
     game::{GameOverEvent, GameState, VIEW_BOX},
+    particles::ParticleEmitter,
     physics::{Gravity, Movement, PlayerCollider},
 };
 
@@ -142,6 +145,10 @@ fn player_dead(
     cmd.entity(entity)
         .remove::<Player>()
         .insert(PlayerCorpse)
+        .insert(
+            ParticleEmitter::new(1, Duration::from_secs_f32(0.01), TimerMode::Repeating)
+                .with_color(Color::RED),
+        )
         .insert(assets.state_dead.clone());
 }
 

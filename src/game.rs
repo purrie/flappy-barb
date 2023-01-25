@@ -127,6 +127,7 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
     let bg1 = asset_server.load("sprites/grass.png");
     let bg2 = asset_server.load("sprites/hills.png");
     let bg3 = asset_server.load("sprites/hill.png");
+    let sun = asset_server.load("sprites/sun.png");
     let size = Vec2 {
         x: VIEW_BOX.width(),
         y: 400.0,
@@ -135,10 +136,7 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
         x: VIEW_BOX.width(),
         y: 300.0,
     };
-    let size3 = Vec2 {
-        x: 300.0,
-        y: 300.0,
-    };
+    let size3 = Vec2 { x: 300.0, y: 300.0 };
 
     cmd.spawn((
         SpriteBundle {
@@ -219,12 +217,26 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
             transform: Transform::from_translation(Vec3 {
                 x: VIEW_BOX.max.x + size3.x,
                 y: VIEW_BOX.min.y + 200.0,
-                z: -3.0
+                z: -3.0,
             }),
             ..default()
         },
-        Scroll { speed: 50.0 }
+        Scroll { speed: 50.0 },
     ));
+    cmd.spawn(SpriteBundle {
+        texture: sun,
+        sprite: Sprite {
+            custom_size: Some(Vec2 { x: 256.0, y: 256.0 }),
+            anchor: Anchor::TopRight,
+            ..default()
+        },
+        transform: Transform::from_translation(Vec3 {
+            x: VIEW_BOX.max.x,
+            y: VIEW_BOX.max.y,
+            z: -4.0,
+        }),
+        ..default()
+    });
 }
 
 fn side_scroll(mut background: Query<(&mut Transform, &Scroll)>, time: Res<Time>) {

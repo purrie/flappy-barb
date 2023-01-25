@@ -21,7 +21,8 @@ impl Plugin for PlayerPlugin {
         let cleanup =
             SystemSet::on_exit(GameState::End).with_system(clean_player.before("cleanup"));
 
-        app.add_system_set(start)
+        app.add_startup_system(load_assets)
+            .add_system_set(start)
             .add_system_set(update)
             .add_system_set(end)
             .add_system_set(cleanup);
@@ -38,6 +39,14 @@ pub enum AttackState {
     SwingEnd,
 }
 
+#[derive(Resource)]
+struct PlayerAssets {
+    state_normal: Handle<Image>,
+    state_swing: Handle<Image>,
+    state_swing_end: Handle<Image>,
+    state_dead: Handle<Image>,
+}
+
 #[derive(Component, Default)]
 pub struct Player {
     pub attack_state: AttackState,
@@ -45,6 +54,16 @@ pub struct Player {
 
 #[derive(Component)]
 pub struct PlayerCorpse;
+
+fn load_assets(mut cmd: Commands, asset_server: Res<AssetServer>) {
+    let ass = PlayerAssets {
+        state_normal: asset_server.load("sprites/barbarian-falling.png"),
+        state_swing: asset_server.load("sprites/barbarian-midswing.png"),
+        state_swing_end: asset_server.load("sprites/barbarian-chop.png"),
+        state_dead: asset_server.load("sprites/barbarian-dead.png"),
+    };
+    cmd.insert_resource(ass);
+}
 
 fn jump_system(input: Res<Input<KeyCode>>, mut player: Query<&mut Movement, With<Player>>) {
     if input.just_pressed(KeyCode::Space) {
@@ -64,28 +83,14 @@ fn attack_state(mut player: Query<(&mut Player, &Movement)>) {
     }
 }
 
-fn animate_player(mut player: Query<(&mut Sprite, &Player)>) {
-    let mut pl = player.get_single_mut().unwrap();
-    pl.0.color = match pl.1.attack_state {
-        AttackState::NotAttacking => Color::Rgba {
-            red: 1.,
-            green: 1.,
-            blue: 1.,
-            alpha: 1.,
-        },
-        AttackState::Swinging => Color::Rgba {
-            red: 1.,
-            green: 1.,
-            blue: 0.5,
-            alpha: 1.,
-        },
-        AttackState::SwingEnd => Color::Rgba {
-            red: 1.,
-            green: 0.5,
-            blue: 0.5,
-            alpha: 1.,
-        },
-    }
+fn animate_player(mut cmd: Commands, player: Query<(Entity, &Player)>, assets: Res<PlayerAssets>) {
+    let pl = player.single();
+    let sprite = match pl.1.attack_state {
+        AttackState::NotAttacking => assets.state_normal.clone(),
+        AttackState::Swinging => assets.state_swing.clone(),
+        AttackState::SwingEnd => assets.state_swing_end.clone(),
+    };
+    cmd.entity(pl.0).insert(sprite);
 }
 
 fn make_player_sprite(mut commands: Commands, _asset_server: Res<AssetServer>) {
@@ -116,14 +121,17 @@ fn make_player_sprite(mut commands: Commands, _asset_server: Res<AssetServer>) {
 }
 
 fn player_dead(
-    mut player: Query<(&mut Sprite, &mut Movement, Entity), With<Player>>,
+    mut player: Query<(&mut Movement, Entity), With<Player>>,
     mut cmd: Commands,
+    assets: Res<PlayerAssets>,
 ) {
-    let mut player = player.get_single_mut().unwrap();
-    player.0.color = Color::GREEN;
-    player.1.y = PLAYER_JUMP_STRENGTH;
+    let (mut movement, entity) = player.single_mut();
+    movement.y = PLAYER_JUMP_STRENGTH;
 
-    cmd.entity(player.2).remove::<Player>().insert(PlayerCorpse);
+    cmd.entity(entity)
+        .remove::<Player>()
+        .insert(PlayerCorpse)
+        .insert(assets.state_dead.clone());
 }
 
 fn clean_player(mut cmd: Commands, player: Query<Entity, With<PlayerCorpse>>) {

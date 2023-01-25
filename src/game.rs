@@ -126,12 +126,17 @@ fn screen_shake(
 fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
     let bg1 = asset_server.load("sprites/grass.png");
     let bg2 = asset_server.load("sprites/hills.png");
+    let bg3 = asset_server.load("sprites/hill.png");
     let size = Vec2 {
         x: VIEW_BOX.width(),
         y: 400.0,
     };
     let size2 = Vec2 {
         x: VIEW_BOX.width(),
+        y: 300.0,
+    };
+    let size3 = Vec2 {
+        x: 300.0,
         y: 300.0,
     };
 
@@ -202,6 +207,23 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
             ..default()
         },
         Scroll { speed: 100.0 },
+    ));
+    cmd.spawn((
+        SpriteBundle {
+            texture: bg3,
+            sprite: Sprite {
+                custom_size: Some(size3),
+                anchor: Anchor::BottomRight,
+                ..default()
+            },
+            transform: Transform::from_translation(Vec3 {
+                x: VIEW_BOX.max.x + size3.x,
+                y: VIEW_BOX.min.y + 200.0,
+                z: -3.0
+            }),
+            ..default()
+        },
+        Scroll { speed: 50.0 }
     ));
 }
 

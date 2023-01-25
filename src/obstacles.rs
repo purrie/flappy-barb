@@ -185,6 +185,7 @@ fn spawn_birds(
         let height = VIEW_BOX.max.y * (1. - height) + VIEW_BOX.min.y * height;
         let img = sprites.bird_fly_1.clone();
         let random_speed = rand::random::<i32>() % 200;
+        let difficulty_meter = 0.55 + (score.score as f32 / 10000.0).min(0.25);
         let sprite = (
             SpriteBundle {
                 texture: img,
@@ -210,7 +211,13 @@ fn spawn_birds(
                 ..default()
             },
             Bird,
-            Collider,
+            Collider {
+                collision_size: Vec2 {
+                    x: ObstacleAssets::BIRD_SPRITE_SIZE_X * 0.9,
+                    y: ObstacleAssets::BIRD_SPRITE_SIZE_Y * 0.9,
+                },
+                kill_size: ObstacleAssets::BIRD_SPRITE_SIZE_X * difficulty_meter,
+            },
             Movement {
                 x: -400.0 - random_speed as f32 - score.current_combo.min(100) as f32 * 2.0,
                 y: 0.,
@@ -279,7 +286,13 @@ fn spawn_tree_obstacles(
                 ..default()
             },
             Tree,
-            Collider,
+            Collider {
+                collision_size: Vec2 {
+                    x: ObstacleAssets::TREE_SPRITE_SIZE_X * 0.9,
+                    y: ObstacleAssets::TREE_SPRITE_SIZE_Y * 0.9,
+                },
+                kill_size: ObstacleAssets::TREE_SPRITE_SIZE_X * 0.4,
+            },
             Movement { x: -200., y: 0. },
         );
         cmd.spawn(sprite);
@@ -324,7 +337,13 @@ fn spawn_cloud_obstacles(
                 ..default()
             },
             Cloud,
-            Collider,
+            Collider {
+                collision_size: Vec2 {
+                    x: ObstacleAssets::CLOUD_SPRITE_SIZE_X * 0.6,
+                    y: ObstacleAssets::CLOUD_SPRITE_SIZE_Y * 0.6,
+                },
+                kill_size: ObstacleAssets::CLOUD_SPRITE_SIZE_X * 0.3,
+            },
             Movement { x: -100.0, y: 0.0 },
         );
         cmd.spawn(cloud);
@@ -362,7 +381,7 @@ fn obstacle_player_collision(
 ) {
     ev.iter().for_each(|o| {
         if o.player_state == AttackState::NotAttacking {
-            if o.player_pos.distance(o.obstacle_pos) < 100.0 {
+            if o.is_deadly {
                 game_over.send_default();
             }
             return;
@@ -584,7 +603,12 @@ fn spawn_bird_corpse(cmd: &mut Commands, sprites: &ObstacleAssets, location: Vec
             x: movement.x,
             y: movement.y,
         },
-        Projectile,
+        Projectile {
+            size: Vec2 {
+                x: ObstacleAssets::BIRD_SPRITE_SIZE_X * 0.9,
+                y: ObstacleAssets::BIRD_SPRITE_SIZE_Y * 0.7,
+            },
+        },
         Gravity::default(),
         FaceMovementDirection {
             neutral: Vec2 { x: 0., y: -1. },

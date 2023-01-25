@@ -29,10 +29,22 @@ impl Plugin for PhysicsPlugin {
 }
 
 #[derive(Component)]
-pub struct Collider;
+pub struct PlayerCollider {
+    pub collision_size: Vec2,
+}
 
 #[derive(Component)]
-pub struct Projectile;
+pub struct Collider {
+    /// size of the collider
+    pub collision_size: Vec2,
+    /// Size inside of the collider that if player enters, it is a game over
+    pub kill_size: f32,
+}
+
+#[derive(Component)]
+pub struct Projectile {
+    pub size: Vec2,
+}
 
 #[derive(Component, Default)]
 pub struct Movement {
@@ -71,6 +83,7 @@ pub struct CollisionEvent {
     pub obstacle: Entity,
     pub obstacle_pos: Vec3,
     pub obstacle_kind: ObstacleKind,
+    pub is_deadly: bool,
 }
 
 pub struct ProjectileCollisionEvent {
@@ -82,34 +95,40 @@ pub struct ProjectileCollisionEvent {
 
 fn collision_detection(
     mut sender: EventWriter<CollisionEvent>,
-    player: Query<(&Sprite, &Transform, &Player, Entity)>,
-    obstacles: Query<(&Sprite, &Transform, Entity, &Obstacle), (With<Collider>, Without<Dead>)>,
+    player: Query<(&PlayerCollider, &Transform, &Player, Entity)>,
+    obstacles: Query<(&Collider, &Transform, Entity, &Obstacle), Without<Dead>>,
 ) {
     let Ok(pl) = player.get_single() else {
         return;
     };
     let p_pos = pl.1.translation;
-    let p_size = pl.0.custom_size.unwrap();
+    let p_size = pl.0.collision_size;
 
     obstacles
         .iter()
         .filter_map(|x| {
             let o_pos = x.1.translation;
-            let o_size = x.0.custom_size.unwrap();
+            let o_size = x.0.collision_size;
             let Some(c) = collide(o_pos, o_size, p_pos, p_size) else {
             return None;
         };
-            Some((c, x.2, x.1, x.3))
+            Some((c, x))
         })
-        .for_each(|x| {
+        .for_each(|(collision, x)| {
+            let is_deadly = if p_pos.distance(x.1.translation) < x.0.kill_size {
+                true
+            } else {
+                false
+            };
             let ev = CollisionEvent {
-                collision: x.0,
+                collision,
                 player_state: pl.2.attack_state.clone(),
                 player: pl.3,
                 player_pos: p_pos,
-                obstacle: x.1,
-                obstacle_pos: x.2.translation,
+                obstacle: x.2,
+                obstacle_pos: x.1.translation,
                 obstacle_kind: x.3.kind.clone(),
+                is_deadly,
             };
             sender.send(ev);
         });
@@ -117,15 +136,15 @@ fn collision_detection(
 
 fn projectile_collision(
     mut sender: EventWriter<ProjectileCollisionEvent>,
-    projectiles: Query<(&Sprite, &Transform), With<Projectile>>,
-    obstacles: Query<(&Sprite, &Transform, Entity, &Obstacle), (With<Collider>, Without<Dead>)>,
+    projectiles: Query<(&Projectile, &Transform)>,
+    obstacles: Query<(&Collider, &Transform, Entity, &Obstacle), Without<Dead>>,
 ) {
-    projectiles.for_each(|(pro_sprite, pro_transform)| {
+    projectiles.for_each(|(projectile, pro_transform)| {
         let pro_pos = pro_transform.translation;
-        let pro_size = pro_sprite.custom_size.unwrap();
-        obstacles.for_each(|(obs_sprite, obs_transform, obs_entity, obstacle)| {
+        let pro_size = projectile.size;
+        obstacles.for_each(|(obs_collider, obs_transform, obs_entity, obstacle)| {
             let obs_pos = obs_transform.translation;
-            let obs_size = obs_sprite.custom_size.unwrap();
+            let obs_size = obs_collider.collision_size;
             if let Some(_) = collide(obs_pos, obs_size, pro_pos, pro_size) {
                 sender.send(ProjectileCollisionEvent {
                     projectile_pos: pro_pos,

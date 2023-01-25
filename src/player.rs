@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     cleanup::Dead,
     game::{GameOverEvent, GameState, VIEW_BOX},
-    physics::{Gravity, Movement},
+    physics::{Gravity, Movement, PlayerCollider},
 };
 
 pub struct PlayerPlugin;
@@ -30,6 +30,8 @@ impl Plugin for PlayerPlugin {
 }
 
 pub const PLAYER_JUMP_STRENGTH: f32 = 500.;
+const PLAYER_SIZE_X: f32 = 169.0;
+const PLAYER_SIZE_Y: f32 = 169.0;
 
 #[derive(Default, Clone, PartialEq)]
 pub enum AttackState {
@@ -98,7 +100,10 @@ fn make_player_sprite(mut commands: Commands, _asset_server: Res<AssetServer>) {
         SpriteBundle {
             // texture: img,
             sprite: Sprite {
-                custom_size: Some(Vec2 { x: 128., y: 128. }),
+                custom_size: Some(Vec2 {
+                    x: PLAYER_SIZE_X,
+                    y: PLAYER_SIZE_Y,
+                }),
                 ..Default::default()
             },
             transform: Transform {
@@ -114,6 +119,12 @@ fn make_player_sprite(mut commands: Commands, _asset_server: Res<AssetServer>) {
         Movement {
             y: PLAYER_JUMP_STRENGTH,
             ..Default::default()
+        },
+        PlayerCollider {
+            collision_size: Vec2 {
+                x: PLAYER_SIZE_X * 0.9,
+                y: PLAYER_SIZE_Y,
+            },
         },
         Gravity::default(),
         Player::default(),

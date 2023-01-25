@@ -518,7 +518,10 @@ fn play_hit_sound(audio: &Res<Audio>, assets: &Res<ObstacleAssets>, obstacle: Ob
                 .get(rand::random::<usize>() % assets.tree_hit_sounds.len())
                 .unwrap()
                 .clone(),
-            PlaybackSettings::default(),
+            PlaybackSettings {
+                volume: 0.6,
+                ..default()
+            },
         ),
         ObstacleKind::Bird => (
             assets
@@ -526,7 +529,10 @@ fn play_hit_sound(audio: &Res<Audio>, assets: &Res<ObstacleAssets>, obstacle: Ob
                 .get(rand::random::<usize>() % assets.bird_hit_sounds.len())
                 .unwrap()
                 .clone(),
-            PlaybackSettings::default(),
+            PlaybackSettings {
+                volume: 0.5,
+                ..default()
+            },
         ),
         ObstacleKind::Cloud => (
             assets

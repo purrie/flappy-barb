@@ -50,6 +50,8 @@ struct PlayerAssets {
     state_swing: Handle<Image>,
     state_swing_end: Handle<Image>,
     state_dead: Handle<Image>,
+    attack_sounds: Vec<Handle<AudioSource>>,
+    death_sounds: Vec<Handle<AudioSource>>,
 }
 
 #[derive(Component, Default)]
@@ -61,19 +63,35 @@ pub struct Player {
 pub struct PlayerCorpse;
 
 fn load_assets(mut cmd: Commands, asset_server: Res<AssetServer>) {
+    let mut attack_sounds = Vec::new();
+    for i in 1..=19 {
+        attack_sounds.push(asset_server.load(format!("audio/barb-attack-{}.ogg", i)));
+    }
+    let mut death_sounds = Vec::new();
+    for i in 1..=8 {
+        death_sounds.push(asset_server.load(format!("audio/barb-death-{}.ogg", i)));
+    }
     let ass = PlayerAssets {
         state_normal: asset_server.load("sprites/barbarian-falling.png"),
         state_swing: asset_server.load("sprites/barbarian-midswing.png"),
         state_swing_end: asset_server.load("sprites/barbarian-chop.png"),
         state_dead: asset_server.load("sprites/barbarian-dead.png"),
+        attack_sounds,
+        death_sounds,
     };
     cmd.insert_resource(ass);
 }
 
-fn jump_system(input: Res<Input<KeyCode>>, mut player: Query<&mut Movement, With<Player>>) {
+fn jump_system(
+    input: Res<Input<KeyCode>>,
+    mut player: Query<&mut Movement, With<Player>>,
+    audio: Res<Audio>,
+    assets: Res<PlayerAssets>,
+) {
     if input.just_pressed(KeyCode::Space) {
-        for mut mov in player.iter_mut() {
-            mov.y = PLAYER_JUMP_STRENGTH;
+        if let Ok(mut player) = player.get_single_mut() {
+            player.y = PLAYER_JUMP_STRENGTH;
+            play_attack_sound(&audio, &assets);
         }
     }
 }
@@ -98,7 +116,12 @@ fn animate_player(mut cmd: Commands, player: Query<(Entity, &Player)>, assets: R
     cmd.entity(pl.0).insert(sprite);
 }
 
-fn make_player_sprite(mut commands: Commands, _asset_server: Res<AssetServer>) {
+fn make_player_sprite(
+    mut commands: Commands,
+    _asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
+    assets: Res<PlayerAssets>,
+) {
     commands.spawn((
         SpriteBundle {
             // texture: img,
@@ -132,12 +155,14 @@ fn make_player_sprite(mut commands: Commands, _asset_server: Res<AssetServer>) {
         Gravity::default(),
         Player::default(),
     ));
+    play_attack_sound(&audio, &assets);
 }
 
 fn player_dead(
     mut player: Query<(&mut Movement, Entity), With<Player>>,
     mut cmd: Commands,
     assets: Res<PlayerAssets>,
+    audio: Res<Audio>,
 ) {
     let (mut movement, entity) = player.single_mut();
     movement.y = PLAYER_JUMP_STRENGTH;
@@ -150,6 +175,7 @@ fn player_dead(
                 .with_color(Color::RED),
         )
         .insert(assets.state_dead.clone());
+    play_death_sound(&audio, &assets);
 }
 
 fn clean_player(mut cmd: Commands, player: Query<Entity, With<PlayerCorpse>>) {
@@ -170,4 +196,22 @@ fn player_out_of_bounds(
     if bottom < VIEW_BOX.min.y || top > VIEW_BOX.max.y {
         event.send_default();
     }
+}
+
+fn play_attack_sound(audio: &Res<Audio>, assets: &PlayerAssets) {
+    let sound = assets
+        .attack_sounds
+        .get(rand::random::<usize>() % assets.attack_sounds.len())
+        .unwrap()
+        .clone();
+    audio.play(sound);
+}
+
+fn play_death_sound(audio: &Res<Audio>, assets: &PlayerAssets) {
+    let sound = assets
+        .death_sounds
+        .get(rand::random::<usize>() % assets.death_sounds.len())
+        .unwrap()
+        .clone();
+    audio.play(sound);
 }

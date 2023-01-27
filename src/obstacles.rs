@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cleanup::Dead,
-    game::{FadeOut, GameOverEvent, GameState, VIEW_BOX},
+    game::{FadeOut, GameOverEvent, GameState, VIEW_BOX, ElapsedTime},
     particles::{EmissionDirection, ParticleEmitter},
     physics::{
         Collider, CollisionEvent, FaceMovementDirection, Gravity, Movement, Projectile,
@@ -174,10 +174,12 @@ fn spawn_birds(
     mut timer: ResMut<BirdSpawnTimer>,
     time: Res<Time>,
     score: Res<Score>,
+    elapsed: Res<ElapsedTime>,
 ) {
     if timer.tick(time.delta()).just_finished() {
-        let variable_time = 1000000000 - score.score.min(1000) as u32 * 1000000;
-        let duration = Duration::new(0, rand::random::<u32>() % (1000000000) + variable_time);
+        let variable_time = 1000000000 - score.score.min(1000) as u32 * 1000000; // scales spawning by how much score player achieved from 1 second to 0 at 1000 points
+        let random_time = rand::random::<u32>() % 500000000; // forms a range of time between 0 and 0.5 seconds
+        let duration = Duration::new(0, random_time + variable_time); // times are added together to create a random range between 0 and 1.5 seconds spawn interval time across the score range
         timer.set_duration(duration);
         timer.reset();
         let rand_height: f32 = rand::random::<f32>();
@@ -185,7 +187,7 @@ fn spawn_birds(
         let height = VIEW_BOX.max.y * (1. - height) + VIEW_BOX.min.y * height;
         let img = sprites.bird_fly_1.clone();
         let random_speed = rand::random::<i32>() % 200;
-        let difficulty_meter = 0.55 + (score.score as f32 / 10000.0).min(0.25);
+        let difficulty_meter = 0.55 + (elapsed.time / 1200.0).min(0.25); // max reached in 5 minutes
         let sprite = (
             SpriteBundle {
                 texture: img,

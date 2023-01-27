@@ -24,7 +24,9 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
+        let play_start = SystemSet::on_enter(GameState::Playing).with_system(reset_elapsed_time);
         let play_update = SystemSet::on_update(GameState::Playing)
+            .with_system(advance_elapsed_time)
             .with_system(game_over.label("game_over").after("collision"));
 
         let menu_update =
@@ -35,12 +37,14 @@ impl Plugin for GamePlugin {
         app.add_state(GameState::MainMenu)
             .add_event::<GameOverEvent>()
             .insert_resource(ScreenShake { shake: 0.0 })
+            .insert_resource(ElapsedTime { time: 0.0 })
             .add_startup_system(make_camera)
             .add_startup_system(make_background)
             .add_system(fade_out)
             .add_system(screen_shake)
             .add_system(side_scroll)
             .add_system_set(menu_update)
+            .add_system_set(play_start)
             .add_system_set(play_update)
             .add_system_set(end_update);
     }
@@ -69,6 +73,11 @@ pub struct FadeOut {
 #[derive(Component)]
 struct Scroll {
     speed: f32,
+}
+
+#[derive(Resource)]
+pub struct ElapsedTime {
+    pub time: f32,
 }
 
 fn make_camera(mut cmd: Commands) {
@@ -121,6 +130,13 @@ fn screen_shake(
 
     // slowly turning the on/off scalar to off position to ease out of the shaking
     shake.shake = shake.shake * (1.0 - time.delta_seconds() * 10.0);
+}
+
+fn reset_elapsed_time(mut elapsed: ResMut<ElapsedTime>) {
+    elapsed.time = 0.0;
+}
+fn advance_elapsed_time(mut elapsed: ResMut<ElapsedTime>, time: Res<Time>) {
+    elapsed.time += time.delta_seconds();
 }
 
 fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {

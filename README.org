@@ -2,7 +2,7 @@
 
 [[./icon.png]]
 
-[[https://youtu.be/uiBjN7ABY_0][Video]]
+[[https://youtu.be/uiBjN7ABY_0]]
 
 [[https://purrie-brightstar.itch.io/flappy-barb][Itch.io Page]]
 

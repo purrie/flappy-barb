@@ -1,5 +1,9 @@
 #+title: Flappy-Barb
 
+[[./icon.png][icon]]
+[[https://youtu.be/uiBjN7ABY_0][Video]]
+[[https://purrie-brightstar.itch.io/flappy-barb][Itch.io Page]]
+
 * About
 Flappy-Barb is a side scrolling game where you take a role of a barbarian who has beef with some birds and his rage takes him into the sky to fight them.
 

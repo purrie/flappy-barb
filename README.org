@@ -1,0 +1,40 @@
+#+title: Flappy-Barb
+
+* About
+Flappy-Barb is a side scrolling game where you take a role of a barbarian who has beef with some birds and his rage takes him into the sky to fight them.
+
+The goal of the game is to achieve the highest score and combo before the birds overwhelm the barbarian.
+
+* How to play
+The game is played using just one button. Press spacebar when in play to swing your axe which also pushes the barbarian upwards. Don't let yourself touch the ground or fly too high and swing when you're about to hit an obstacle.
+
+You get awarded points for hitting birds and the more you hit without letting any pass, the more your combo meter will increase, which will award you more points as it grows.
+
+* Building
+The game uses Bevy game engine and to build it, you need to satisfy its requirements. Otherwise Cargo will manage all the dependencies.
+
+The project uses Just command runner to handle building scripts. You can install it through Cargo.
+#+BEGIN_SRC shell
+cargo install just
+#+END_SRC
+You can build and install the game using this command.
+#+BEGIN_SRC shell
+just install
+#+END_SRC
+Examine the justfile for details.
+
+* Copyright
+Flappy-Barb, a side scrolling game
+Copyright (C) 2023 Purrie & Muchaczowicz
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 2 of the License.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.

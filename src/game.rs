@@ -144,6 +144,7 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
     let bg2 = asset_server.load("sprites/hills.png");
     let bg3 = asset_server.load("sprites/hill.png");
     let sun = asset_server.load("sprites/sun.png");
+    let background = asset_server.load("sprites/background.png");
     let size = Vec2 {
         x: VIEW_BOX.width(),
         y: 400.0,
@@ -250,6 +251,23 @@ fn make_background(mut cmd: Commands, asset_server: Res<AssetServer>) {
             x: VIEW_BOX.max.x,
             y: VIEW_BOX.max.y,
             z: -4.0,
+        }),
+        ..default()
+    });
+    cmd.spawn(SpriteBundle {
+        texture: background,
+        sprite: Sprite {
+            custom_size: Some(Vec2 {
+                x: VIEW_BOX.max.x - VIEW_BOX.min.x,
+                y: VIEW_BOX.max.y - VIEW_BOX.min.y,
+            }),
+            anchor: Anchor::BottomLeft,
+            ..default()
+        },
+        transform: Transform::from_translation(Vec3 {
+            x: VIEW_BOX.min.x,
+            y: VIEW_BOX.min.y,
+            z: -5.0
         }),
         ..default()
     });

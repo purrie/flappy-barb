@@ -6,7 +6,7 @@ use crate::{
     cleanup::Dead,
     game::{GameOverEvent, GameState, VIEW_BOX},
     particles::ParticleEmitter,
-    physics::{Gravity, Movement, PlayerCollider},
+    physics::{FaceMovementDirection, Gravity, Movement, PlayerCollider},
 };
 
 pub struct PlayerPlugin;
@@ -50,6 +50,7 @@ struct PlayerAssets {
     state_swing: Handle<Image>,
     state_swing_end: Handle<Image>,
     state_dead: Handle<Image>,
+    axe: Handle<Image>,
     attack_sounds: Vec<Handle<AudioSource>>,
     death_sounds: Vec<Handle<AudioSource>>,
 }
@@ -76,6 +77,7 @@ fn load_assets(mut cmd: Commands, asset_server: Res<AssetServer>) {
         state_swing: asset_server.load("sprites/barbarian-midswing.png"),
         state_swing_end: asset_server.load("sprites/barbarian-chop.png"),
         state_dead: asset_server.load("sprites/barbarian-dead.png"),
+        axe: asset_server.load("sprites/axe.png"),
         attack_sounds,
         death_sounds,
     };
@@ -159,12 +161,12 @@ fn make_player_sprite(
 }
 
 fn player_dead(
-    mut player: Query<(&mut Movement, Entity), With<Player>>,
+    mut player: Query<(&mut Movement, &Transform, Entity), With<Player>>,
     mut cmd: Commands,
     assets: Res<PlayerAssets>,
     audio: Res<Audio>,
 ) {
-    let (mut movement, entity) = player.single_mut();
+    let (mut movement, transform, entity) = player.single_mut();
     movement.y = PLAYER_JUMP_STRENGTH;
 
     cmd.entity(entity)
@@ -175,6 +177,29 @@ fn player_dead(
                 .with_color(Color::RED),
         )
         .insert(assets.state_dead.clone());
+    cmd.spawn((
+        SpriteBundle {
+            texture: assets.axe.clone(),
+            sprite: Sprite {
+                custom_size: Some(Vec2 {
+                    x: PLAYER_SIZE_X * 0.7,
+                    y: PLAYER_SIZE_Y * 0.7,
+                }),
+                ..default()
+            },
+            transform: Transform::from_translation(transform.translation),
+            ..default()
+        },
+        Movement {
+            x: PLAYER_JUMP_STRENGTH,
+            y: PLAYER_JUMP_STRENGTH,
+        },
+        FaceMovementDirection {
+            neutral: Vec2 { x: 0.0, y: -1.0 },
+        },
+        Gravity::default(),
+        Dead { timer: 5.0 },
+    ));
     play_death_sound(&audio, &assets);
 }
 

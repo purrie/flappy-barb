@@ -10,4 +10,25 @@ rand = "0.8"
 
 [dependencies.bevy]
 version = "0.9"
-features = ["dynamic"]
+default-features = false
+features = [
+         "bevy_asset",
+         "bevy_audio",
+         "bevy_winit",
+         "bevy_core_pipeline",
+         "bevy_sprite",
+         "bevy_text",
+         "bevy_ui",
+         "png",
+         "vorbis",
+         "x11"
+]
+
+
+[profile.release]
+lto = "thin"
+opt-level = "s"
+
+[features]
+unix_assets = []
+local_unix_assets = []

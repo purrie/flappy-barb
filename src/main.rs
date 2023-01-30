@@ -20,7 +20,33 @@ use player::PlayerPlugin;
 use ui::GameUiPlugin;
 
 fn main() {
-    App::new()
+    let asset_folder = if cfg!(feature = "local_unix_assets") {
+        let home = match std::env::var("HOME") {
+            Ok(o) => o,
+            Err(_) => panic!("Couldn't obtain HOME directory"),
+        };
+        format!("{}/.local/share/flappy-barb/", home)
+    } else if cfg!(feature = "unix_assets") {
+        String::from("/usr/share/flappy-barb/")
+    } else {
+        String::from("assets/")
+    };
+    let window = if cfg!(target_arch = "wasm32") {
+        WindowDescriptor {
+            width: 1280.0,
+            height: 720.0,
+            ..default()
+        }
+    } else {
+        WindowDescriptor {
+            title: String::from("Flappy Barb"),
+            width: 1280.0,
+            height: 720.0,
+            ..default()
+        }
+    };
+    let mut app = App::new();
+    app
         // Engine Plugins
         .add_plugin(CorePlugin::default())
         .add_plugin(TimePlugin::default())
@@ -28,15 +54,11 @@ fn main() {
         .add_plugin(HierarchyPlugin::default())
         .add_plugin(InputPlugin::default())
         .add_plugin(WindowPlugin {
-            window: WindowDescriptor {
-                title: String::from("Flappy Barb"),
-                width: 1280.0,
-                height: 720.0,
-                ..default()
-            },
+            window,
             ..default()
         })
         .add_plugin(AssetPlugin {
+            asset_folder,
             ..Default::default()
         })
         .add_plugin(WinitPlugin::default())
@@ -54,6 +76,7 @@ fn main() {
         .add_plugin(GameUiPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(CleanerPlugin)
-        .add_plugin(ParticlePlugin)
-        .run();
+        .add_plugin(ParticlePlugin);
+
+    app.run();
 }

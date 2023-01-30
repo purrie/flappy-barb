@@ -1,6 +1,6 @@
 #+title: Flappy-Barb
 
-[[./icon.png][icon]]
+[[./icon.png]]
 
 [[https://youtu.be/uiBjN7ABY_0][Video]]
 
